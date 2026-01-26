@@ -1,0 +1,110 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String     @id
+  name          String
+  email         String     @unique
+  emailVerified Boolean    @default(false)
+  image         String?
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @default(now()) @updatedAt
+  bio           String?
+  projectsOwned Projects[]
+  accounts      Account[]
+  sessions      Session[]
+
+  @@map("user")
+}
+
+model Session {
+  id        String   @id
+  expiresAt DateTime
+  token     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id
+  accountId             String
+  providerId            String
+  userId                String
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("account")
+}
+
+model Verification {
+  id         String   @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @default(now()) @updatedAt
+
+  @@map("verification")
+}
+
+model Projects {
+  id          String    @id @default(cuid())
+  createdAt   DateTime  @default(now())
+  title       String?
+  description String?
+  color       String?
+  userId      String
+  updatedAt   DateTime  @default(now())
+  columns     Columns[]
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Columns {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  projectId String
+  title     String
+  sortOrder Int      @default(0)
+  project   Projects @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  tasks     Tasks[]
+}
+
+model Tasks {
+  id          String   @id @default(cuid())
+  createdAt   DateTime @default(now())
+  title       String
+  description String?
+  assignedTo  String?
+  dueDate     String?
+  priority    priority @default(medium)
+  sortOrder   Int      @default(0)
+  columnId    String
+  completed   Boolean  @default(false)
+  column      Columns  @relation(fields: [columnId], references: [id], onDelete: Cascade)
+}
+
+enum priority {
+  low
+  medium
+  high
+}
