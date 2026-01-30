@@ -1,7 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import Header from "@/components/Header";
 import AppProvider from "@/components/AppProvider";
 
 export const metadata: Metadata = {
@@ -24,7 +22,9 @@ export default function RootLayout({
         suppressHydrationWarning={true}
         className="bg-[#eaedf2] dark:bg-[#1F1F21]"
       >
-        <AppProvider>{children}</AppProvider>
+          <AppProvider>
+            {children}
+          </AppProvider>
       </body>
     </html>
   );

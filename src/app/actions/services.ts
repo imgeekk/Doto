@@ -272,6 +272,25 @@ async function reorderTasks(
   }
 }
 
+async function updateTaskTitle(
+  newTitle: string,
+  taskId: string,
+){
+  try{
+    const task = await prisma.tasks.update({
+      where: {
+        id: taskId
+      },
+      data: {
+        title: newTitle
+      }
+    });
+    return task;
+  } catch(err){
+    throw err;
+  }
+}
+
 // ---Project + Column Services---
 
 async function createProjectWithDefaultColumn(projectData: {
@@ -328,4 +347,5 @@ export {
   moveTaskToColumn,
   reorderColumns,
   reorderTasks,
+  updateTaskTitle
 };

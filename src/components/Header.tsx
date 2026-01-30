@@ -48,13 +48,13 @@ const Header = ({ visible, className }: { visible: Boolean; className?: string }
   };
 
   return (
-    <div className={twMerge("dark:text-white text-zinc-950 h-14 w-full flex justify-between items-center sm:px-30 px-5 py-3", className)}>
+    <div className={twMerge("bg-white dark:bg-black/20 dark:text-white text-zinc-950 h-15 w-full flex justify-between items-center max-sm:px-5 sm:px-10 mb-5", className)}>
       <Link
         href="/"
         className="flex items-center font-bold sm:text-2xl text-md font-[inter]"
       >
         <div className="h-6 w-6 relative overflow-hidden rounded-[3px] mr-2"><Image src="/images/logog.png" alt="text" fill className="object-contain"/></div>
-        Kanvas
+        Doto
       </Link>
 
       <div className="flex gap-4 items-center leading-0">

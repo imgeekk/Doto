@@ -43,6 +43,8 @@ import { Badge } from "@/components/badge-2";
 import { useOnClickOutside } from "usehooks-ts";
 import { set } from "better-auth";
 import { reorderColumns, reorderTasks } from "@/app/actions/services";
+import useCardModal from "@/hooks/use-task-modal";
+import { MdKeyboardArrowLeft } from "react-icons/md";
 
 const Page = () => {
   const router = useRouter();
@@ -151,7 +153,7 @@ const Page = () => {
   //   }
   // }
 
-  const onDragEnd = async(result: any) => {
+  const onDragEnd = async (result: any) => {
     const { source, destination, type } = result;
 
     // dropped outside the list
@@ -159,7 +161,10 @@ const Page = () => {
       return;
     }
 
-    if(source.droppableId === destination.droppableId && source.index === destination.index){
+    if (
+      source.droppableId === destination.droppableId &&
+      source.index === destination.index
+    ) {
       return;
     }
 
@@ -189,7 +194,6 @@ const Page = () => {
 
     // Handle task reordering
     if (type === "task") {
-
       let reorderdTasks = [];
 
       if (source.droppableId === destination.droppableId) {
@@ -200,7 +204,7 @@ const Page = () => {
         const [movedTask] = newTasks.splice(source.index, 1);
         newTasks.splice(destination.index, 0, movedTask);
         const newColumns = columns.map((col) =>
-          col.id === column.id ? { ...col, tasks: newTasks } : col
+          col.id === column.id ? { ...col, tasks: newTasks } : col,
         );
         setColumns(newColumns);
 
@@ -210,14 +214,13 @@ const Page = () => {
           columnId: column.id,
           sortOrder: index,
         }));
-      }
-      else {
+      } else {
         // Moving task between columns
         const sourceColumn = columns.find(
-          (col) => col.id === source.droppableId
+          (col) => col.id === source.droppableId,
         );
         const destColumn = columns.find(
-          (col) => col.id === destination.droppableId
+          (col) => col.id === destination.droppableId,
         );
         if (!sourceColumn || !destColumn) return;
         const sourceTasks = Array.from(sourceColumn.tasks);
@@ -335,7 +338,7 @@ const Page = () => {
       try {
         setIsAddingTask(false);
         await createRealTask(column.id, { title: taskTitle }).then(() =>
-          console.log("added nig check db")
+          console.log("added nig check db"),
         );
       } catch (err) {
         console.error(err);
@@ -346,127 +349,127 @@ const Page = () => {
       <Draggable draggableId={String(column.id)} index={index}>
         {(provided) => (
           <div className="px-2">
-          <Card
-            {...provided.draggableProps}
-            ref={provided.innerRef}
-            className="w-full sm:flex-shrink-0 sm:w-75 h-fit p-2 rounded-lg bg-zinc-100 dark:bg-zinc-950 shadow-xs shadow-gray-500 dark:shadow-none"
-          >
-            <div
-              {...provided.dragHandleProps}
-              className="flex items-center justify-between"
+            <Card
+              {...provided.draggableProps}
+              ref={provided.innerRef}
+              className="w-full sm:flex-shrink-0 sm:w-75 h-fit p-2 rounded-lg bg-zinc-100 dark:bg-zinc-950 shadow-xs shadow-gray-500 dark:shadow-none"
             >
-              <div className="p-1">
-                {isEditing ? (
-                  // contentEditable span: do NOT render newColumnTitle inside JSX while editing
-                  <span
-                    ref={titleRef}
-                    contentEditable
-                    suppressContentEditableWarning
-                    onInput={(e) =>
-                      setNewColumnTitle(e.currentTarget.textContent || "")
-                    }
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault();
-                        handleSave();
-                      } else if (e.key === "Escape") {
-                        e.preventDefault();
-                        handleCancel();
+              <div
+                {...provided.dragHandleProps}
+                className="flex items-center justify-between"
+              >
+                <div className="p-1">
+                  {isEditing ? (
+                    // contentEditable span: do NOT render newColumnTitle inside JSX while editing
+                    <span
+                      ref={titleRef}
+                      contentEditable
+                      suppressContentEditableWarning
+                      onInput={(e) =>
+                        setNewColumnTitle(e.currentTarget.textContent || "")
                       }
-                    }}
-                    onBlur={() => {
-                      // Save on blur
-                      handleSave();
-                    }}
-                    autoFocus
-                    className="p-2 block rounded-sm  focus-within:outline-blue-500 focus-within:outline-1 font-[intermed] max-w-50 bg-transparent"
-                    style={{
-                      whiteSpace: "pre-wrap",
-                      wordBreak: "break-word",
-                      overflowWrap: "break-word",
-                    }}
-                  />
-                ) : (
-                  <p
-                    className="p-2 dark:hover:bg-zinc-800 hover:bg-zinc-200 hover:cursor-pointer rounded-sm max-w-50 whitespace-normal overflow-visible break-words font-[intermed]"
-                    onClick={() => {
-                      setIsEditing(true);
-                      // initialize local state; effect will set innerText and focus
-                      setNewColumnTitle(column?.title || "");
-                    }}
-                  >
-                    {column?.title}
-                  </p>
-                )}
-              </div>
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          handleSave();
+                        } else if (e.key === "Escape") {
+                          e.preventDefault();
+                          handleCancel();
+                        }
+                      }}
+                      onBlur={() => {
+                        // Save on blur
+                        handleSave();
+                      }}
+                      autoFocus
+                      className="p-2 block rounded-sm  focus-within:outline-blue-500 focus-within:outline-1 font-[intermed] max-w-50 bg-transparent"
+                      style={{
+                        whiteSpace: "pre-wrap",
+                        wordBreak: "break-word",
+                        overflowWrap: "break-word",
+                      }}
+                    />
+                  ) : (
+                    <p
+                      className="p-2 dark:hover:bg-zinc-800 hover:bg-zinc-200 hover:cursor-pointer rounded-sm max-w-50 whitespace-normal overflow-visible break-words font-[intermed]"
+                      onClick={() => {
+                        setIsEditing(true);
+                        // initialize local state; effect will set innerText and focus
+                        setNewColumnTitle(column?.title || "");
+                      }}
+                    >
+                      {column?.title}
+                    </p>
+                  )}
+                </div>
 
-              <Button variant="ghost">
-                <MoreHorizontal size={15} />
-              </Button>
-            </div>
-            <Droppable droppableId={String(column.id)} type="task">
-              {(provided) => (
-                <ol
-                  ref={provided.innerRef}
-                  {...provided.droppableProps}
-                  className="py-[1px]"
-                >
-                  {column.tasks.map((task, index) => (
-                    <li key={index} className="my-2.5">
-                      <SortableTask
-                        index={index}
-                        taskTitle={task.title}
-                        taskId={task.id}
-                        taskCompleted={task.completed}
-                      ></SortableTask>
-                    </li>
-                  ))}
-                  {provided.placeholder}
-                </ol>
-              )}
-            </Droppable>
-            {!isAddingTask ? (
-              <div className="p-1">
-                <Button
-                  variant="ghost"
-                  className="w-full"
-                  onClick={() => setIsAddingTask(true)}
-                >
-                  <Plus size={15} />
-                  Add Task
+                <Button variant="ghost">
+                  <MoreHorizontal size={15} />
                 </Button>
               </div>
-            ) : (
-              <div className="p-1">
-                <textarea
-                  name=""
-                  id=""
-                  value={taskTitle}
-                  onChange={(e) => setTaskTitle(e.target.value)}
-                  className="resize-none w-full px-3 py-2 rounded-sm bg-zinc-50 dark:bg-zinc-800 border not-hover:border-blue-500 outline-none font-[inter] "
-                  autoFocus
-                ></textarea>
-                <div className="flex space-x-2 items-center">
-                  <Button
-                    className="bg-blue-400 hover:bg-blue-300 text-zinc-900"
-                    onClick={handleCreateTask}
+              <Droppable droppableId={String(column.id)} type="task">
+                {(provided) => (
+                  <ol
+                    ref={provided.innerRef}
+                    {...provided.droppableProps}
+                    className="py-[1px]"
                   >
-                    Add Task
-                  </Button>
+                    {column.tasks.map((task, index) => (
+                      <li key={index} className="my-2.5">
+                        <SortableTask
+                          index={index}
+                          taskTitle={task.title}
+                          taskId={task.id}
+                          taskCompleted={task.completed}
+                        ></SortableTask>
+                      </li>
+                    ))}
+                    {provided.placeholder}
+                  </ol>
+                )}
+              </Droppable>
+              {!isAddingTask ? (
+                <div className="p-1">
                   <Button
                     variant="ghost"
-                    className="h-full p-2"
-                    onClick={() => {
-                      setIsAddingTask(false);
-                      setTaskTitle("");
-                    }}
+                    className="w-full"
+                    onClick={() => setIsAddingTask(true)}
                   >
-                    <X size={15} />
+                    <Plus size={15} />
+                    Add Task
                   </Button>
                 </div>
-              </div>
-            )}
-          </Card>
+              ) : (
+                <div className="p-1">
+                  <textarea
+                    name=""
+                    id=""
+                    value={taskTitle}
+                    onChange={(e) => setTaskTitle(e.target.value)}
+                    className="resize-none w-full px-3 py-2 rounded-sm bg-zinc-50 dark:bg-zinc-800 border not-hover:border-blue-500 outline-none font-[inter] "
+                    autoFocus
+                  ></textarea>
+                  <div className="flex space-x-2 items-center">
+                    <Button
+                      className="bg-blue-400 hover:bg-blue-300 text-zinc-900"
+                      onClick={handleCreateTask}
+                    >
+                      Add Task
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      className="h-full p-2"
+                      onClick={() => {
+                        setIsAddingTask(false);
+                        setTaskTitle("");
+                      }}
+                    >
+                      <X size={15} />
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </Card>
           </div>
         )}
       </Draggable>
@@ -491,6 +494,7 @@ const Page = () => {
     const [completed, setCompleted] = useState(taskCompleted);
     const timeoutRef = useRef<NodeJS.Timeout | null>(null);
     const DEBOUNCE_DELAY_MS = 300; // Adjust delay as needed
+    const cardModal = useCardModal();
 
     async function handleSetComplete() {
       // 1. Calculate the intended final state for this click
@@ -508,24 +512,24 @@ const Page = () => {
       // We wrap the async logic in a function that receives the final intended state
       // as it exists *right now* (newCompletedState).
       // timeoutRef.current = setTimeout(async () => {
-        try {
-          // Use the stable 'newCompletedState' value captured when the function was scheduled
-          await setTaskComplete(taskId, newCompletedState);
-          console.log(
-            `API call successful for final state: ${newCompletedState}`
-          );
+      try {
+        // Use the stable 'newCompletedState' value captured when the function was scheduled
+        await setTaskComplete(taskId, newCompletedState);
+        console.log(
+          `API call successful for final state: ${newCompletedState}`,
+        );
 
-          // NOTE: If the setTaskComplete function is already updating your global
-          // 'columns' state via the useProject hook, you may not need to do anything else.
-        } catch (err) {
-          console.error("API update failed, rolling back UI:", err);
+        // NOTE: If the setTaskComplete function is already updating your global
+        // 'columns' state via the useProject hook, you may not need to do anything else.
+      } catch (err) {
+        console.error("API update failed, rolling back UI:", err);
 
-          // 5. ROLLBACK on FAILURE: Only revert the state if the API call failed.
-          // Revert back to the state *before* the optimistic update (which is !newCompletedState)
-          setCompleted(!newCompletedState);
-        } finally {
-          timeoutRef.current = null;
-        }
+        // 5. ROLLBACK on FAILURE: Only revert the state if the API call failed.
+        // Revert back to the state *before* the optimistic update (which is !newCompletedState)
+        setCompleted(!newCompletedState);
+      } finally {
+        timeoutRef.current = null;
+      }
       // }, DEBOUNCE_DELAY_MS);
     }
 
@@ -537,8 +541,6 @@ const Page = () => {
       };
     }, []);
 
-    const MotionCard = motion.create(Card);
-
     return (
       <Draggable draggableId={taskId} index={index}>
         {(provided) => (
@@ -548,11 +550,11 @@ const Page = () => {
             ref={provided.innerRef}
             className="group"
           >
-            <Card className="relative flex items-center gap-2 p-2 rounded-sm mx-1 dark:bg-zinc-800 bg-[#f5f9ff] hover:cursor-pointer shadow-xs border-none shadow-gray-400 dark:shadow-none"
-            onClick={() => {
-              setIsTaskModalOpen(true);
-
-            }}
+            <Card
+              className="relative flex items-center gap-2 p-2 rounded-sm mx-1 dark:bg-zinc-800 bg-[#f5f9ff] hover:cursor-pointer shadow-xs border-none shadow-gray-400 dark:shadow-none"
+              onClick={() => {
+                cardModal.onOpen(taskId)
+              }}
             >
               <div
                 id="sliding checkbox"
@@ -624,12 +626,10 @@ const Page = () => {
         className="h-screen w-full flex flex-col "
       >
         {/* NavBar */}
-        <nav className="bg-transparent backdrop-blur-2xl">
-          
+        <nav className="bg-transparent backdrop-blur-2xl flex flex-col">
+          <Button id="back-button" variant="ghost" className="w-fit mx-5" onClick={() => router.push("/projects")}><MdKeyboardArrowLeft size={15}/>Back to Projects</Button>
           <div className="flex items-center justify-between h-15">
-            
             <div className="sm:text-2xl text-xl font-[intermed] px-5">
-              
               {isEditingProjectTitle ? (
                 <div className="inline-block relative">
                   <span
@@ -661,7 +661,7 @@ const Page = () => {
                 </div>
               ) : (
                 <h1
-                  className="p-2 dark:hover:bg-zinc-800 hover:bg-zinc-300 hover:cursor-pointer rounded-sm max-w-[70vw] truncate whitespace-nowrap overflow-hidden"
+                  className="p-2 dark:hover:bg-zinc-700 hover:bg-zinc-300 hover:cursor-pointer rounded-sm max-w-[70vw] truncate whitespace-nowrap overflow-hidden"
                   onClick={() => {
                     setIsEditingProjectTitle(true);
                     setNewProjectTitle(project?.title || "");
@@ -711,8 +711,8 @@ const Page = () => {
                           priority === "low"
                             ? "bg-green-600"
                             : priority == "medium"
-                            ? "bg-yellow-600"
-                            : "bg-red-600"
+                              ? "bg-yellow-600"
+                              : "bg-red-600"
                         }`}
                       ></div>
                     </Button>
@@ -743,13 +743,6 @@ const Page = () => {
           </DialogContent>
         </Dialog>
 
-        <Dialog open={isTaskModalOpen} onOpenChange={setIsTaskModalOpen}>
-          <DialogContent className="w-[95vw] max-w-[425px] mx-auto font-[inter] top-[30%]">
-              <header className="bg-red-600">
-              </header>
-          </DialogContent>
-        </Dialog>
-
         {/* Main section */}
         <main className="flex-1 p-3">
           <section className="h-full flex max-sm:flex-col overflow-x-auto flex-1 overflow-auto custom-scrollbar">
@@ -761,7 +754,7 @@ const Page = () => {
               >
                 {(provided) => (
                   <ol
-                  id="columns container"
+                    id="columns container"
                     {...provided.droppableProps}
                     ref={provided.innerRef}
                     className="flex max-sm:flex-col max-sm:space-x-0 max-sm:space-y-4"
@@ -833,8 +826,12 @@ const Page = () => {
               )}
             </DragDropContext>
             <div>
-              { reorderingColumns && <p className="text-4xl font-[inter]">Reordering columns...</p> }
-              { reorderingTasks && <p className="text-4xl font-[inter]">Reordering tasks...</p> }
+              {reorderingColumns && (
+                <p className="text-4xl font-[inter]">Reordering columns...</p>
+              )}
+              {reorderingTasks && (
+                <p className="text-4xl font-[inter]">Reordering tasks...</p>
+              )}
             </div>
           </section>
         </main>
