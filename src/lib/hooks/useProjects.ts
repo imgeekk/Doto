@@ -1,7 +1,7 @@
 "use client";
 
 import { authClient } from "@/app/lib/auth-client";
-import { Column, ColumnWithTasks, Project } from "@/config/model";
+import { ColumnWithTasks, Task } from "@/config/model";
 import {
   createProjectWithDefaultColumn,
   getProjects,
@@ -13,211 +13,342 @@ import {
   setComplete,
   moveTaskToColumn,
 } from "@/app/actions/services";
-import { useEffect, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 export function useProjects() {
+  const queryClient = useQueryClient();
   const { data, isPending } = authClient.useSession();
   const userId = data?.user.id;
 
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const {
+    data: projects = [],
+    isLoading,
+    error,
+  } = useQuery({
+    queryKey: ["projects", userId],
+    queryFn: () => getProjects(userId!),
+    enabled: !!userId,
+  });
 
-  useEffect(() => {
-    if (userId) {
-      loadProjects();
-    }
-  }, [userId]);
-
-  async function loadProjects() {
-    if (!userId) return;
-
-    try {
-      setLoading(true);
-      setError(null);
-      const data = await getProjects(userId);
-      setProjects(data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load projects");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function createProject(projectData: {
-    title: string;
-    description?: string;
-    color?: string;
-  }) {
-    if (!userId) throw new Error("User not authenticated");
-
-    try {
-      const newProject = await createProjectWithDefaultColumn({
+  const createProject = useMutation({
+    mutationFn: (projectData: {
+      title: string;
+      description?: string;
+      color?: string;
+    }) =>
+      createProjectWithDefaultColumn({
         ...projectData,
-        userId,
-      });
-      setProjects((prev) => [
-        ...prev,
-        newProject
-      ])
-      return newProject.id
-    } catch (err) {
-      console.error(err);
-      setError(err instanceof Error ? err.message : "Failed to create project");
-    }
-  }
+        userId: userId!,
+      }),
 
-  return { createProject, projects, error, loading };
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["projects", userId],
+      });
+    },
+  });
+
+  return {
+    projects,
+    isLoading,
+    error,
+    createProject: createProject.mutateAsync,
+  };
 }
 
 export function useProject(projectId: string) {
-  const [project, setProject] = useState<Project | null>(null);
-  const [columns, setColumns] = useState<ColumnWithTasks[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
 
-  useEffect(() => {
-    if (projectId) {
-      loadProject();
-    }
-  }, [projectId]);
+  //fetch project
 
-  async function loadProject() {
-    if (!projectId) return;
+  const { data, isLoading, error } = useQuery({
+    queryKey: ["project", projectId],
+    queryFn: () => getProjectsWithColumns(projectId),
+    enabled: !!projectId,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+  });
 
-    try {
-      setLoading(true);
-      setError(null);
-      const data = await getProjectsWithColumns(projectId);
-      setProject(data.project);
-      setColumns(data.columnsWithTasks);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load projects");
-    } finally {
-      setLoading(false);
-    }
-  }
+  const project = data?.project;
+  const columns = data?.columnsWithTasks ?? [];
 
-  async function updateProjectTitle(projectId: string, newTitle: string) {
-    try {
-      const updatedProject = await updateProject(projectId, newTitle);
-      setProject(updatedProject);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to update project");
-    }
-  }
+  //update project title
 
-  async function updateColumnTitle(columnId: string, newTitle: string) {
-    try {
-        console.log('Pre-Update Column Titles:', columns.map(c => c.title));
+  const updateProjectTitle = useMutation({
+    mutationFn: ({
+      projectId,
+      newTitle,
+    }: {
+      projectId: string;
+      newTitle: string;
+    }) => updateProject(projectId, newTitle),
 
-        const updatedColumn = await updateColumn(columnId, newTitle);
+    onMutate: async({projectId, newTitle}) => {
+      await queryClient.cancelQueries({queryKey: ["project", projectId]});
 
-        setColumns((prev) => {
-            const newState = prev.map((col) => col.id === columnId ? {...col, title: newTitle} : col);
-            console.log('Post-Update Column Titles (in setter):', newState.map(c => c.title));
-            return newState;
-        });
-    } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to update project");
-    }
-}
+      const previousData = queryClient.getQueryData(["project", projectId]);
 
-  async function createRealTask(
-    columnId: string,
-    taskData: {
-      title: string;
-      description?: string;
-      // assignee?: string;
-      dueDate?: string;
-      prority?: "low" | "medium" | "high";
-    }
-  ) {
-    try {
-      const newTask = await createTask({
-        title: taskData.title,
-        description: taskData.description || null,
-        completed: false,
-        dueDate: taskData.dueDate || null,
-        columnId: columnId,
-        sortOrder:
-          columns.find((col) => col.id === columnId)?.tasks.length || 0,
-        priority: taskData.prority || "medium",
-      });
-
-      setColumns((prev) =>
-        prev.map((col) =>
-          col.id === columnId ? { ...col, tasks: [...col.tasks, newTask] } : col
-        )
-      );
-
-      return newTask
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to create task");
-    }
-  }
-
-  async function createNewColumn(title: string){
-    if(!project) throw new Error("Board not loaded");
-    try {
-      const newColumn = await createColumn({title, projectId: project.id, sortOrder: columns.length})
-
-      setColumns((prev) => [...prev, {...newColumn, tasks: []}]);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to create column")
-    }
-  }
-
-  async function setTaskComplete(taskId: string, completed: boolean) {
-    try {
-      const updatedTask = await setComplete(taskId, completed)
-      setColumns((prev) => prev.map((col) => {
-        const taskIndex = col.tasks.findIndex((task) => task.id === taskId);
-
-        if(taskIndex == -1){
-          return col;
-        }
+      queryClient.setQueryData(["project", projectId], (old: any) => {
+        if(!old) return old;
 
         return {
-          ...col,
-          tasks: col.tasks.map((task) => task.id === taskId ? updatedTask : task)
+          ...old,
+          project: {
+            ...old.project,
+            title: newTitle,
+          }
+        };
+      });
+      return {previousData};
+    },
+
+    onError: (_err, _vars, context) => {
+      queryClient.setQueryData(
+        ["project", projectId],
+        context?.previousData
+      )
+    },
+
+    onSuccess: (updatedProject) => {
+      queryClient.setQueryData(
+        ["project", projectId],
+        (old: any) => {
+          if(!old) return old;
+
+          return {
+            ...old,
+            project: updatedProject,
+          }
         }
-      }));
-      return updatedTask;
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to update project");
+      )
     }
-  }
-  async function moveTask(taskId: string, newColumnId: string, newOrder: number){
-    try {
-      const data = await moveTaskToColumn(taskId, newColumnId, newOrder)
+  });
 
-      setColumns((prev) => {
-        const newColumns = [...prev];
+  // update column title
 
-        let taskToMove;
-        for(const col of newColumns) {
-          const taskIndex = col.tasks.findIndex((task) => task.id === taskId);
-          if(taskIndex !== -1) {
-            taskToMove = col.tasks[taskIndex];
-            col.tasks.splice(taskIndex, 1);
+  const updateColumnTitle = useMutation({
+    mutationFn: ({
+      columnId,
+      newTitle,
+    }: {
+      columnId: string;
+      newTitle: string;
+    }) => updateColumn(columnId, newTitle),
+
+   onMutate: async({columnId, newTitle}) => {
+      await queryClient.cancelQueries({queryKey: ["project", projectId]});
+
+      const previousData = queryClient.getQueryData(["project", projectId]);
+
+      queryClient.setQueryData(["project", projectId], (old: any) => {
+        if(!old) return old;
+
+        return {
+          columnsWithTasks: old.columnsWithTasks.map((col: ColumnWithTasks) =>
+            col.id === columnId
+              ? { ...col, title: newTitle }
+              : col,
+          ),
+        };
+      });
+      return {previousData};
+    },
+
+    onError: (_err, _vars, context) => {
+      queryClient.setQueryData(
+        ["project", projectId],
+        context?.previousData
+      )
+    },
+
+  });
+
+  //create task
+
+  const createTaskMutation = useMutation({
+    mutationFn: createTask,
+
+    onMutate: async (newTask) => {
+      await queryClient.cancelQueries({ queryKey: ["project", projectId] });
+
+      const previousData = queryClient.getQueryData(["project", projectId]);
+
+      queryClient.setQueryData(["project", projectId], (old: any) => {
+        if (!old) return old;
+
+        return {
+          ...old,
+          columnsWithTasks: old.columnsWithTasks.map((col: ColumnWithTasks) =>
+            col.id === newTask.columnId
+              ? { ...col, tasks: [...col.tasks, newTask] }
+              : col,
+          ),
+        };
+      });
+
+      return { previousData };
+    },
+
+    onError: (_err, _vars, context) => {
+      queryClient.setQueryData(["project", projectId], context?.previousData);
+    },
+
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["project", projectId],
+      });
+    },
+  });
+
+  // create new column
+
+  const createColumnMutation = useMutation({
+    mutationFn: createColumn,
+
+    onMutate: async (newColumn) => {
+      await queryClient.cancelQueries({
+        queryKey: ["project", projectId],
+      });
+
+      const previousData = queryClient.getQueryData(["project", projectId]);
+
+      queryClient.setQueryData(["project", projectId], (old: any) => {
+        if (!old) return old;
+
+        return {
+          ...old,
+          columnsWithTasks: [
+            ...old.columnsWithTasks,
+            {
+              id: "temp-column",
+              title: newColumn.title,
+              tasks: [],
+            },
+          ],
+        };
+      });
+
+      return { previousData };
+    },
+
+    onError: (_err, _vars, context) => {
+      queryClient.setQueryData(["project", projectId], context?.previousData);
+    },
+
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["project", projectId],
+      });
+    },
+  });
+
+
+  // move task
+
+  const moveTaskMutation = useMutation({
+    mutationFn: ({
+      taskId,
+      newColumnId,
+      newOrder,
+    }: {
+      taskId: string;
+      newColumnId: string;
+      newOrder: number;
+    }) => moveTaskToColumn(taskId, newColumnId, newOrder),
+
+    onMutate: async ({ taskId, newColumnId, newOrder }) => {
+      await queryClient.cancelQueries({ queryKey: ["project", projectId] });
+
+      const previousData = queryClient.getQueryData(["project", projectId]);
+
+      queryClient.setQueryData(["project", projectId], (old: any) => {
+        if (!old) return old;
+
+        const columns = structuredClone(old.columnsWithTasks);
+
+        let movedTask;
+
+        for (const col of columns) {
+          const index = col.tasks.findIndex((t: Task) => t.id === taskId);
+          if (index !== -1) {
+            movedTask = col.tasks.splice(index, 1)[0];
             break;
           }
         }
 
-        if(taskToMove) {
-          const targetColumn = newColumns.find((col) => col.id === newColumnId)
-          if(targetColumn){
-            targetColumn.tasks.splice(newOrder, 0, taskToMove)
+        if (movedTask) {
+          const target = columns.find(
+            (c: ColumnWithTasks) => c.id === newColumnId,
+          );
+          target.tasks.splice(newOrder, 0, movedTask);
+        }
+
+        return { ...old, columnsWithTasks: columns };
+      });
+
+      return { previousData };
+    },
+
+    onError: (_err, _vars, context) => {
+      queryClient.setQueryData(["project", projectId], context?.previousData);
+    },
+
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["project", projectId] });
+    },
+  });
+
+
+  // set complete
+
+  const setCompleteMutation = useMutation({
+    mutationFn: ({
+      taskId,
+      completed,
+    }: {
+      taskId: string;
+      completed: boolean;
+    }) => setComplete(taskId, completed),
+
+    onMutate: async ({ taskId, completed }) => {
+      await queryClient.cancelQueries({ queryKey: ["project", projectId] });
+
+      const previousData = queryClient.getQueryData(["project", projectId]);
+
+      queryClient.setQueryData(["project", projectId], (old: any) => {
+        if (!old) return old;
+
+        const copy = structuredClone(old);
+
+        for (const col of copy.columnsWithTasks) {
+          const task = col.tasks.find((t: Task) => t.id === taskId);
+          if (task) {
+            task.completed = completed;
+            break;
           }
         }
-        return newColumns
-      })
-    } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to move task");
-    }
-  }
+        return copy;
+      });
 
+      return { previousData };
+    },
 
-  return { project, columns, loading, error, updateProjectTitle, createRealTask, updateColumnTitle, setTaskComplete, setColumns, moveTask, createNewColumn};
+    onError: (_err, _vars, context) => {
+      if (context?.previousData) {
+        queryClient.setQueryData(["project", projectId], context.previousData);
+      }
+    },
+  });
+
+  return {
+    project,
+    columns,
+    isLoading,
+    error,
+    updateProjectTitle: updateProjectTitle.mutate,
+    updateColumnTitle: updateColumnTitle.mutate,
+    createTask: createTaskMutation.mutate,
+    moveTask: moveTaskMutation.mutate,
+    setTaskComplete: setCompleteMutation.mutate,
+  };
 }

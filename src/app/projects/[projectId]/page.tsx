@@ -3,23 +3,11 @@
 import Header from "@/components/Header";
 import { Card, CardContent, CardTitle } from "@/components/ui/card";
 import { useProject } from "@/lib/hooks/useProjects";
-import {
-  ArrowLeft,
-  Check,
-  Cross,
-  CrossIcon,
-  Edit,
-  MoreHorizontal,
-  Plus,
-  PlusIcon,
-  X,
-} from "lucide-react";
-import Link from "next/link";
+import { Check, MoreHorizontal, Plus, X } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { BiLeftArrow } from "react-icons/bi";
 import RippleWaveLoader from "@/components/ui/ripple-loader";
-import React, { ReactNode, useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { BsFilter } from "react-icons/bs";
 import { Button } from "@/components/ui/button";
@@ -28,20 +16,9 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { ColumnWithTasks, Task } from "@/config/model";
 import { DragDropContext, Draggable, Droppable } from "@hello-pangea/dnd";
-import { Badge } from "@/components/badge-2";
-import { useOnClickOutside } from "usehooks-ts";
-import { set } from "better-auth";
 import { reorderColumns, reorderTasks } from "@/app/actions/services";
 import useCardModal from "@/hooks/use-task-modal";
 import { MdKeyboardArrowLeft } from "react-icons/md";
@@ -52,23 +29,21 @@ const Page = () => {
   const {
     project,
     columns,
-    loading,
+    isLoading,
     error,
     updateProjectTitle,
-    createRealTask,
+    // createRealTask,
     updateColumnTitle,
     setTaskComplete,
-    setColumns,
     moveTask,
-    createNewColumn,
+    // createNewColumn,
   } = useProject(params.projectId);
 
   const [isEditingProjectTitle, setIsEditingProjectTitle] = useState(false);
-
-  const [newProjectTitle, setNewProjectTitle] = useState(project?.title || "");
+  const [localProjectTitle, setLocalProjectTitle] = useState(project?.title);
 
   const projectTitleSpanRef = useRef<HTMLSpanElement>(null);
-  const projectTitleInputRef = useRef<HTMLInputElement>(null);
+  const projectTitleRef = useRef<HTMLSpanElement>(null);
   const [filterCount, setFilterCount] = useState(0);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
@@ -85,31 +60,47 @@ const Page = () => {
   };
 
   useEffect(() => {
-    if (
-      isEditingProjectTitle &&
-      projectTitleSpanRef.current &&
-      projectTitleInputRef.current
-    ) {
-      projectTitleSpanRef.current.textContent = newProjectTitle || " ";
-      projectTitleInputRef.current.style.width = `${
-        projectTitleSpanRef.current.offsetWidth + 2
-      }px`;
+    if (project?.title) {
+      setLocalProjectTitle(project.title);
     }
-  }, [isEditingProjectTitle, newProjectTitle]);
+  }, [project?.title]);
 
-  const handleProjectTitleSubmit = async () => {
-    if (!newProjectTitle.trim() || !project) {
+  useEffect(() => {
+    if (isEditingProjectTitle && projectTitleRef.current) {
+      projectTitleRef.current.focus();
+      // Optional: place cursor at the end of text
+      const range = document.createRange();
+      const selection = window.getSelection();
+      range.selectNodeContents(projectTitleRef.current);
+      range.collapse(false); // collapse to end
+      if (selection) {
+        selection.removeAllRanges();
+      }
+      if (selection) {
+        selection.addRange(range);
+      }
+    }
+  }, [isEditingProjectTitle]);
+
+  const handleProjectTitleSubmit = async (newTitle: string) => {
+    if (!newTitle?.trim() || !project) {
+      setLocalProjectTitle(project?.title);
+      if (projectTitleRef.current) {
+        projectTitleRef.current.textContent = localProjectTitle!;
+      }
       setIsEditingProjectTitle(false);
       return;
     }
 
-    if (newProjectTitle === project.title) {
+    if (newTitle === project.title) {
       setIsEditingProjectTitle(false);
       return;
     }
     try {
-      projectTitleInputRef.current?.blur();
-      await updateProjectTitle(project.id, newProjectTitle);
+      updateProjectTitle({
+        projectId: project.id,
+        newTitle: newTitle,
+      });
       setIsEditingProjectTitle(false);
     } catch (error) {
       console.log(error);
@@ -273,65 +264,60 @@ const Page = () => {
     index: number;
     column: ColumnWithTasks;
   }) {
-    const [isEditing, setIsEditing] = useState(false);
-    const [newColumnTitle, setNewColumnTitle] = useState(column?.title || "");
-    const titleRef = useRef<HTMLSpanElement | null>(null);
+    const [isEditingColumnTitle, setIsEditingColumnTitle] = useState(false);
+    const [localColumnTitle, setLocalColumnTitle] = useState(column?.title);
+    const columnTitleRef = useRef<HTMLSpanElement | null>(null);
 
     const [isAddingTask, setIsAddingTask] = useState(false);
     const [taskTitle, setTaskTitle] = useState("");
 
-    // Keep local state in sync when column prop changes (e.g. after remote update)
     useEffect(() => {
-      if (!isEditing) {
-        setNewColumnTitle(column?.title || "");
+      if (column.title) {
+        setLocalColumnTitle(column.title);
       }
-    }, [column?.title, isEditing]);
+    }, [column.title]);
 
-    // When edit mode starts, initialize the span's DOM content and focus + move caret to end
     useEffect(() => {
-      if (isEditing && titleRef.current) {
-        // Put initial text into the DOM once (do NOT render state inside span while editing)
-        titleRef.current.innerText = newColumnTitle || "";
-
-        // Focus and move caret to end
-        titleRef.current.focus();
+      if (isEditingColumnTitle && columnTitleRef.current) {
+        columnTitleRef.current.focus();
+        // Optional: place cursor at the end of text
         const range = document.createRange();
-        range.selectNodeContents(titleRef.current);
-        range.collapse(false);
-        const sel = window.getSelection();
-        sel?.removeAllRanges();
-        sel?.addRange(range);
+        const selection = window.getSelection();
+        range.selectNodeContents(columnTitleRef.current);
+        range.collapse(false); // collapse to end
+        if (selection) {
+          selection.removeAllRanges();
+        }
+        if (selection) {
+          selection.addRange(range);
+        }
       }
-    }, [isEditing]); // run only when editing mode flips
+    }, [isEditingColumnTitle]);
 
-    const handleSave = async () => {
-      const trimmed = (newColumnTitle || "").trim();
+    const handleSave = async (newTitle: string) => {
+      const trimmed = (newTitle || "").trim();
       if (!trimmed) {
-        // revert if empty
-        setNewColumnTitle(column.title);
-        setIsEditing(false);
+        if(columnTitleRef.current){
+          columnTitleRef.current.textContent = localColumnTitle;
+        }
+        setIsEditingColumnTitle(false);
         return;
       }
       if (trimmed !== column.title) {
         try {
-          titleRef.current?.blur();
-          await updateColumnTitle(column.id, trimmed); // your hook function
-          setIsEditing(false);
+          updateColumnTitle({ columnId: column.id, newTitle: trimmed });
+          setIsEditingColumnTitle(false);
         } catch (err) {
-          // optionally handle error / revert UI
           console.error(err);
-          setNewColumnTitle(column.title);
         }
       } else {
-        // no change
-        setNewColumnTitle(column.title);
-        setIsEditing(false);
+        setIsEditingColumnTitle(false);
       }
     };
 
     const handleCancel = () => {
-      setIsEditing(false);
-      setNewColumnTitle(column.title);
+      setIsEditingColumnTitle(false);
+      setLocalColumnTitle(column.title);
     };
 
     async function handleCreateTask() {
@@ -359,48 +345,37 @@ const Page = () => {
                 className="flex items-center justify-between"
               >
                 <div className="p-1">
-                  {isEditing ? (
-                    // contentEditable span: do NOT render newColumnTitle inside JSX while editing
-                    <span
-                      ref={titleRef}
-                      contentEditable
-                      suppressContentEditableWarning
-                      onInput={(e) =>
-                        setNewColumnTitle(e.currentTarget.textContent || "")
+                  <span
+                    ref={columnTitleRef}
+                    defaultValue={localProjectTitle || ""}
+                    contentEditable={isEditingColumnTitle}
+                    suppressContentEditableWarning
+                    onClick={(e) => {
+                      if (!isEditingColumnTitle) setIsEditingColumnTitle(true);
+                    }}
+                    onBlur={(e) => {
+                      setIsEditingColumnTitle(false);
+                      const newTitle = e.currentTarget.textContent || "";
+                      handleSave(newTitle);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        e.currentTarget.blur();
                       }
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          e.preventDefault();
-                          handleSave();
-                        } else if (e.key === "Escape") {
-                          e.preventDefault();
-                          handleCancel();
-                        }
-                      }}
-                      onBlur={() => {
-                        // Save on blur
-                        handleSave();
-                      }}
-                      autoFocus
-                      className="p-2 block rounded-sm  focus-within:outline-blue-500 focus-within:outline-1 font-[intermed] max-w-50 bg-transparent"
-                      style={{
-                        whiteSpace: "pre-wrap",
-                        wordBreak: "break-word",
-                        overflowWrap: "break-word",
-                      }}
-                    />
-                  ) : (
-                    <p
-                      className="p-2 dark:hover:bg-zinc-800 hover:bg-zinc-200 hover:cursor-pointer rounded-sm max-w-50 whitespace-normal overflow-visible break-words font-[intermed]"
-                      onClick={() => {
-                        setIsEditing(true);
-                        // initialize local state; effect will set innerText and focus
-                        setNewColumnTitle(column?.title || "");
-                      }}
-                    >
-                      {column?.title}
-                    </p>
-                  )}
+                      if (e.key === "Escape") {
+                        e.currentTarget.textContent = column.title;
+                        setIsEditingColumnTitle(false);
+                      }
+                    }}
+                    className={`text-lg w-full block font-bold px-2 py-1 trunacate whitespace-nowrap rounded-[4px] focus:outline-1 focus:outline-blue-500 hover:bg-black/10 dark:hover:bg-zinc-900 leading-snug ${
+                      !isEditingColumnTitle
+                        ? "hover:cursor-pointer"
+                        : "focus:cursor-text bg-white dark:bg-zinc-800"
+                    }`}
+                  >
+                    {localColumnTitle}
+                  </span>
                 </div>
 
                 <Button variant="ghost">
@@ -491,47 +466,9 @@ const Page = () => {
     taskCompleted: boolean;
   }) {
     const [addingTask, setAddingTask] = useState(false);
-    const [completed, setCompleted] = useState(taskCompleted);
     const timeoutRef = useRef<NodeJS.Timeout | null>(null);
     const DEBOUNCE_DELAY_MS = 300; // Adjust delay as needed
     const cardModal = useCardModal();
-
-    async function handleSetComplete() {
-      // 1. Calculate the intended final state for this click
-      const newCompletedState = !completed;
-
-      // ⚡️ 2. OPTIMISTIC UPDATE: Update UI instantly
-      setCompleted(newCompletedState);
-
-      // 🛑 3. CLEAR PREVIOUS DEBOUNCE: Cancel any waiting API call
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
-
-      // 4. SCHEDULE NEW DEBOUNCED API CALL
-      // We wrap the async logic in a function that receives the final intended state
-      // as it exists *right now* (newCompletedState).
-      // timeoutRef.current = setTimeout(async () => {
-      try {
-        // Use the stable 'newCompletedState' value captured when the function was scheduled
-        await setTaskComplete(taskId, newCompletedState);
-        console.log(
-          `API call successful for final state: ${newCompletedState}`,
-        );
-
-        // NOTE: If the setTaskComplete function is already updating your global
-        // 'columns' state via the useProject hook, you may not need to do anything else.
-      } catch (err) {
-        console.error("API update failed, rolling back UI:", err);
-
-        // 5. ROLLBACK on FAILURE: Only revert the state if the API call failed.
-        // Revert back to the state *before* the optimistic update (which is !newCompletedState)
-        setCompleted(!newCompletedState);
-      } finally {
-        timeoutRef.current = null;
-      }
-      // }, DEBOUNCE_DELAY_MS);
-    }
 
     React.useEffect(() => {
       return () => {
@@ -546,36 +483,37 @@ const Page = () => {
         {(provided) => (
           <div
             {...provided.draggableProps}
-            {...provided.dragHandleProps}
+            
             ref={provided.innerRef}
             className="group"
           >
             <Card
-              className="relative flex items-center gap-2 p-2 rounded-sm mx-1 dark:bg-zinc-800 bg-[#f5f9ff] hover:cursor-pointer shadow-xs border-none shadow-gray-400 dark:shadow-none"
-              onClick={() => {
-                cardModal.onOpen(taskId)
-              }}
+              className="relative flex items-center gap-2  rounded-sm mx-1 dark:bg-zinc-800 bg-[#f5f9ff] hover:cursor-pointer shadow-xs border-none shadow-gray-400 dark:shadow-none"
+              
             >
               <div
                 id="sliding checkbox"
-                onClick={(e) => {
+                onPointerDown={(e) => {
                   e.stopPropagation();
-                  handleSetComplete();
+                  setTaskComplete({taskId: taskId, completed: !taskCompleted})
                 }}
-                className={`absolute h-4 w-4 border-1 border-zinc-900 dark:border-white rounded-full flex items-center justify-center opacity-0 transition-all duration-200 group-hover:opacity-100  ${
-                  completed
+                className={`absolute h-4 w-4 ml-2 rounded-full border-1 border-zinc-900 dark:border-white z-99 flex items-center justify-center opacity-0 transition-all duration-200 group-hover:opacity-100  ${
+                  taskCompleted
                     ? "bg-green-500 opacity-100 border-none"
                     : "bg-transparent"
                 }`}
-                style={{ pointerEvents: "auto", touchAction: "none" }}
               >
-                {completed && (
+                {taskCompleted && (
                   <Check size={10} className="text-white dark:text-zinc-900" />
                 )}
               </div>
               <p
-                className={`transition-all duration-200 group-hover:pl-6 ${
-                  completed ? "pl-6" : ""
+              {...provided.dragHandleProps}
+              onClick={() => {
+                cardModal.onOpen(taskId);
+              }}
+                className={`transition-all w-full p-2 duration-200 group-hover:ml-6 ${
+                  taskCompleted? "ml-6" : ""
                 }`}
               >
                 {taskTitle}
@@ -587,7 +525,7 @@ const Page = () => {
     );
   }
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="relative h-screen w-full">
         <Header visible={true} />
@@ -627,50 +565,42 @@ const Page = () => {
       >
         {/* NavBar */}
         <nav className="bg-transparent backdrop-blur-2xl flex flex-col">
-          <Button id="back-button" variant="ghost" className="w-fit mx-5" onClick={() => router.push("/projects")}><MdKeyboardArrowLeft size={15}/>Back to Projects</Button>
+          <Button
+            id="back-button"
+            variant="ghost"
+            className="w-fit mx-5"
+            onClick={() => router.push("/projects")}
+          >
+            <MdKeyboardArrowLeft size={15} />
+            Back to Projects
+          </Button>
           <div className="flex items-center justify-between h-15">
-            <div className="sm:text-2xl text-xl font-[intermed] px-5">
-              {isEditingProjectTitle ? (
-                <div className="inline-block relative">
-                  <span
-                    ref={projectTitleSpanRef}
-                    className="absolute invisible whitespace-pre px-2 sm:text-2xl text-xl font-[intermed] max-w-[70vw]"
-                  />
-                  <input
-                    ref={projectTitleInputRef}
-                    type="text"
-                    value={newProjectTitle}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      setNewProjectTitle(val);
+            <span
+              ref={projectTitleRef}
+              defaultValue={localProjectTitle || ""}
+              contentEditable={isEditingProjectTitle}
+              suppressContentEditableWarning
+              onClick={() => setIsEditingProjectTitle(true)}
+              onBlur={(e) => {
+                setIsEditingProjectTitle(false);
+                const newTitle = e.currentTarget.textContent || "";
+                handleProjectTitleSubmit(newTitle);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  e.currentTarget.blur();
+                }
+                if (e.key === "Escape") {
+                  e.currentTarget.textContent = project?.title || "";
+                  setIsEditingProjectTitle(false);
+                }
+              }}
+              className="text-2xl font-bold tracking-wide mx-5 p-1 px-2 max-w-[90%] truncate whitespace-nowrap rounded-[4px] focus:outline-1 focus:outline-blue-500 hover:bg-black/10 dark:hover:bg-zinc-700 hover:cursor-pointer focus:cursor-text"
+            >
+              {localProjectTitle}
+            </span>
 
-                      if (projectTitleSpanRef.current) {
-                        projectTitleSpanRef.current.textContent = val || " ";
-                        e.target.style.width = `${
-                          projectTitleSpanRef.current.offsetWidth + 2
-                        }px`;
-                      }
-                    }}
-                    onKeyDown={handleKeyDown}
-                    onBlur={handleBlur}
-                    autoFocus
-                    onFocus={(e) => e.target.select()}
-                    className="p-2 flex rounded-sm focus-within:outline-blue-500 focus-within:outline-1"
-                    style={{ width: "auto" }}
-                  />
-                </div>
-              ) : (
-                <h1
-                  className="p-2 dark:hover:bg-zinc-700 hover:bg-zinc-300 hover:cursor-pointer rounded-sm max-w-[70vw] truncate whitespace-nowrap overflow-hidden"
-                  onClick={() => {
-                    setIsEditingProjectTitle(true);
-                    setNewProjectTitle(project?.title || "");
-                  }}
-                >
-                  {project?.title}
-                </h1>
-              )}
-            </div>
             <div className="px-3">
               <button
                 className="dark:hover:bg-zinc-800 hover:bg-zinc-300 p-1 flex gap-1 items-center text-sm hover:cursor-pointer rounded-sm"
