@@ -19,22 +19,25 @@ import {
 } from "@/components/ui/dialog";
 import { ColumnWithTasks, Task } from "@/config/model";
 import { DragDropContext, Draggable, Droppable } from "@hello-pangea/dnd";
-import { reorderColumns, reorderTasks } from "@/app/actions/services";
+import { reorderColumns, reorderTasks, setComplete } from "@/app/actions/services";
 import useCardModal from "@/hooks/use-task-modal";
 import { MdKeyboardArrowLeft } from "react-icons/md";
+import { useQueryClient } from "@tanstack/react-query";
 
 const Page = () => {
   const router = useRouter();
   const params = useParams<{ projectId: string }>();
   const {
     project,
-    columns,
+    columns: serverColumns,
     isLoading,
     error,
     updateProjectTitle,
-    // createRealTask,
+    createTask,
     updateColumnTitle,
     setTaskComplete,
+    reorderTask,
+    reorderColumns,
     moveTask,
     // createNewColumn,
   } = useProject(params.projectId);
@@ -49,15 +52,21 @@ const Page = () => {
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
   const [activeTaskId, setActiveTaskId] = useState<number | null>(null);
   const [activeTask, setActiveTask] = useState<Task | null>(null);
+  const [isReorderingColumns, setIsReorderingColumns] = useState(false);
+  const [isReorderingTasks, setIsReorderingTasks] = useState(false);
   const [isAddingColumn, setIsAddingColumn] = useState(false);
   const [reorderingColumns, setReorderingColumns] = useState(false);
   const [reorderingTasks, setReorderingTasks] = useState(false);
 
   const [dragActiveTask, setDragActiveTask] = useState<Task | null>(null);
 
+
+
   const onFilterClick = () => {
     setIsFilterOpen(true);
   };
+
+
 
   useEffect(() => {
     if (project?.title) {
@@ -161,10 +170,10 @@ const Page = () => {
 
     // Handle column reordering
     if (type === "column") {
-      const newColumns = Array.from(columns);
+      const newColumns = Array.from(serverColumns);
       const [movedColumn] = newColumns.splice(source.index, 1);
       newColumns.splice(destination.index, 0, movedColumn);
-      setColumns(newColumns);
+      setIsReorderingColumns(true);
 
       //db update preparation
       const reorderedColumns = newColumns.map((col, index) => ({
@@ -174,10 +183,12 @@ const Page = () => {
 
       try {
         setReorderingColumns(true);
-        await reorderColumns(project!.id, reorderedColumns);
+        reorderColumns({projectId: project!.id, columnUpdates: reorderedColumns});
         setReorderingColumns(false);
       } catch (err) {
         console.error("Error reordering columns:", err);
+      } finally{
+        setIsReorderingColumns(false);
       }
 
       return;
@@ -185,19 +196,22 @@ const Page = () => {
 
     // Handle task reordering
     if (type === "task") {
+      setIsReorderingTasks(true);
       let reorderdTasks = [];
 
       if (source.droppableId === destination.droppableId) {
         // Reordering within the same column
-        const column = columns.find((col) => col.id === source.droppableId);
-        if (!column) return;
+        const column = serverColumns.find((col) => col.id === source.droppableId);
+        if (!column){
+          setReorderingTasks(false);
+          return;
+        }
         const newTasks = Array.from(column.tasks);
         const [movedTask] = newTasks.splice(source.index, 1);
         newTasks.splice(destination.index, 0, movedTask);
-        const newColumns = columns.map((col) =>
-          col.id === column.id ? { ...col, tasks: newTasks } : col,
+        const newColumns = serverColumns.map((col) =>
+          column && col.id === column.id ? { ...col, tasks: newTasks } : col,
         );
-        setColumns(newColumns);
 
         //db update preparation
         reorderdTasks = newTasks.map((task, index) => ({
@@ -207,10 +221,10 @@ const Page = () => {
         }));
       } else {
         // Moving task between columns
-        const sourceColumn = columns.find(
+        const sourceColumn = serverColumns.find(
           (col) => col.id === source.droppableId,
         );
-        const destColumn = columns.find(
+        const destColumn = serverColumns.find(
           (col) => col.id === destination.droppableId,
         );
         if (!sourceColumn || !destColumn) return;
@@ -218,7 +232,7 @@ const Page = () => {
         const destTasks = Array.from(destColumn.tasks);
         const [movedTask] = sourceTasks.splice(source.index, 1);
         destTasks.splice(destination.index, 0, movedTask);
-        const newColumns = columns.map((col) => {
+        const newColumns = serverColumns.map((col) => {
           if (col.id === sourceColumn.id) {
             return { ...col, tasks: sourceTasks };
           }
@@ -227,7 +241,6 @@ const Page = () => {
           }
           return col;
         });
-        setColumns(newColumns);
 
         //db update preparation
         const updatedDestinationTasks = destTasks.map((task, index) => ({
@@ -246,7 +259,7 @@ const Page = () => {
       // actual db update
       try {
         setReorderingTasks(true);
-        await reorderTasks(reorderdTasks);
+        reorderTask(reorderdTasks)
         setReorderingTasks(false);
       } catch (err) {
         console.error("Error reordering tasks:", err);
@@ -323,9 +336,7 @@ const Page = () => {
     async function handleCreateTask() {
       try {
         setIsAddingTask(false);
-        await createRealTask(column.id, { title: taskTitle }).then(() =>
-          console.log("added nig check db"),
-        );
+        createTask({ title: taskTitle, columnId: column.id, sortOrder: column.tasks.length++ })
       } catch (err) {
         console.error(err);
       }
@@ -387,10 +398,11 @@ const Page = () => {
                   <ol
                     ref={provided.innerRef}
                     {...provided.droppableProps}
+                    key={column.id}
                     className="py-[1px]"
                   >
                     {column.tasks.map((task, index) => (
-                      <li key={index} className="my-2.5">
+                      <li key={task.id} className="my-2.5">
                         <SortableTask
                           index={index}
                           taskTitle={task.title}
@@ -421,7 +433,7 @@ const Page = () => {
                     id=""
                     value={taskTitle}
                     onChange={(e) => setTaskTitle(e.target.value)}
-                    className="resize-none w-full px-3 py-2 rounded-sm bg-zinc-50 dark:bg-zinc-800 border not-hover:border-blue-500 outline-none font-[inter] "
+                    className="resize-none w-full px-2 py-2 rounded-sm bg-zinc-50 dark:bg-zinc-800 border not-hover:border-blue-500 outline-none font-[inter] "
                     autoFocus
                   ></textarea>
                   <div className="flex space-x-2 items-center">
@@ -488,7 +500,7 @@ const Page = () => {
             className="group"
           >
             <Card
-              className="relative flex items-center gap-2  rounded-sm mx-1 dark:bg-zinc-800 bg-[#f5f9ff] hover:cursor-pointer shadow-xs border-none shadow-gray-400 dark:shadow-none"
+              className="relative flex items-center gap-2 rounded-sm mx-1 dark:bg-zinc-800 bg-[#f5f9ff] hover:cursor-pointer shadow-xs border-none shadow-gray-400 dark:shadow-none"
               
             >
               <div
@@ -497,7 +509,7 @@ const Page = () => {
                   e.stopPropagation();
                   setTaskComplete({taskId: taskId, completed: !taskCompleted})
                 }}
-                className={`absolute h-4 w-4 ml-2 rounded-full border-1 border-zinc-900 dark:border-white z-99 flex items-center justify-center opacity-0 transition-all duration-200 group-hover:opacity-100  ${
+                className={`absolute h-4 w-4 ml-2 rounded-full border-1 border-zinc-900 dark:border-white flex items-center justify-center opacity-0 transition-all duration-200 group-hover:opacity-100  ${
                   taskCompleted
                     ? "bg-green-500 opacity-100 border-none"
                     : "bg-transparent"
@@ -512,8 +524,8 @@ const Page = () => {
               onClick={() => {
                 cardModal.onOpen(taskId);
               }}
-                className={`transition-all w-full p-2 duration-200 group-hover:ml-6 ${
-                  taskCompleted? "ml-6" : ""
+                className={`transition-all w-full p-2 duration-200 group-hover:translate-x-5 ${
+                  taskCompleted? "translate-x-5" : ""
                 }`}
               >
                 {taskTitle}
@@ -689,10 +701,10 @@ const Page = () => {
                     ref={provided.innerRef}
                     className="flex max-sm:flex-col max-sm:space-x-0 max-sm:space-y-4"
                   >
-                    {columns.map((column, index) => (
+                    {serverColumns.map((column, index) => (
                       <DraggableColumn
                         index={index}
-                        key={index}
+                        key={column.id}
                         column={column}
                       >
                         {/* <ul>

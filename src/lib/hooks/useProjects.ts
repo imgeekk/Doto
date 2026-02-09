@@ -1,7 +1,7 @@
 "use client";
 
 import { authClient } from "@/app/lib/auth-client";
-import { ColumnWithTasks, Task } from "@/config/model";
+import { Column, ColumnWithTasks, Project, Task } from "@/config/model";
 import {
   createProjectWithDefaultColumn,
   getProjects,
@@ -12,6 +12,8 @@ import {
   createColumn,
   setComplete,
   moveTaskToColumn,
+  reorderTasks,
+  reorderColumns,
 } from "@/app/actions/services";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
@@ -83,45 +85,39 @@ export function useProject(projectId: string) {
       newTitle: string;
     }) => updateProject(projectId, newTitle),
 
-    onMutate: async({projectId, newTitle}) => {
-      await queryClient.cancelQueries({queryKey: ["project", projectId]});
+    onMutate: async ({ projectId, newTitle }) => {
+      await queryClient.cancelQueries({ queryKey: ["project", projectId] });
 
       const previousData = queryClient.getQueryData(["project", projectId]);
 
       queryClient.setQueryData(["project", projectId], (old: any) => {
-        if(!old) return old;
+        if (!old) return old;
 
         return {
           ...old,
           project: {
             ...old.project,
             title: newTitle,
-          }
+          },
         };
       });
-      return {previousData};
+      return { previousData };
     },
 
     onError: (_err, _vars, context) => {
-      queryClient.setQueryData(
-        ["project", projectId],
-        context?.previousData
-      )
+      queryClient.setQueryData(["project", projectId], context?.previousData);
     },
 
     onSuccess: (updatedProject) => {
-      queryClient.setQueryData(
-        ["project", projectId],
-        (old: any) => {
-          if(!old) return old;
+      queryClient.setQueryData(["project", projectId], (old: any) => {
+        if (!old) return old;
 
-          return {
-            ...old,
-            project: updatedProject,
-          }
-        }
-      )
-    }
+        return {
+          ...old,
+          project: updatedProject,
+        };
+      });
+    },
   });
 
   // update column title
@@ -135,32 +131,26 @@ export function useProject(projectId: string) {
       newTitle: string;
     }) => updateColumn(columnId, newTitle),
 
-   onMutate: async({columnId, newTitle}) => {
-      await queryClient.cancelQueries({queryKey: ["project", projectId]});
+    onMutate: async ({ columnId, newTitle }) => {
+      await queryClient.cancelQueries({ queryKey: ["project", projectId] });
 
       const previousData = queryClient.getQueryData(["project", projectId]);
 
       queryClient.setQueryData(["project", projectId], (old: any) => {
-        if(!old) return old;
+        if (!old) return old;
 
         return {
           columnsWithTasks: old.columnsWithTasks.map((col: ColumnWithTasks) =>
-            col.id === columnId
-              ? { ...col, title: newTitle }
-              : col,
+            col.id === columnId ? { ...col, title: newTitle } : col,
           ),
         };
       });
-      return {previousData};
+      return { previousData };
     },
 
     onError: (_err, _vars, context) => {
-      queryClient.setQueryData(
-        ["project", projectId],
-        context?.previousData
-      )
+      queryClient.setQueryData(["project", projectId], context?.previousData);
     },
-
   });
 
   //create task
@@ -242,7 +232,6 @@ export function useProject(projectId: string) {
     },
   });
 
-
   // move task
 
   const moveTaskMutation = useMutation({
@@ -298,7 +287,6 @@ export function useProject(projectId: string) {
     },
   });
 
-
   // set complete
 
   const setCompleteMutation = useMutation({
@@ -340,6 +328,101 @@ export function useProject(projectId: string) {
     },
   });
 
+  const reorderTasksMutation = useMutation({
+    mutationFn: reorderTasks,
+
+    onMutate: async (taskUpdates) => {
+      await queryClient.cancelQueries({ queryKey: ["project", projectId] });
+
+      const previousData = queryClient.getQueryData<{
+        project: Project;
+        columnsWithTasks: ColumnWithTasks[];
+      }>(["project", projectId]);
+
+      if (!previousData) return;
+
+      const oldColumns = structuredClone(previousData.columnsWithTasks);
+
+      for (const update of taskUpdates) {
+        let movedTask: Task | undefined;
+
+        for (const col of oldColumns) {
+          const idx = col.tasks.findIndex((t) => t.id === update.id);
+          if (idx !== -1) {
+            movedTask = col.tasks.splice(idx, 1)[0];
+            break;
+          }
+        }
+
+        if (movedTask) {
+          const targetColumn = oldColumns.find(
+            (col) => col.id === update.columnId,
+          );
+          if (targetColumn) {
+            movedTask.sortOrder = update.sortOrder;
+            movedTask.columnId = update.columnId;
+            targetColumn.tasks.splice(update.sortOrder, 0, movedTask);
+          }
+        }
+      }
+
+      queryClient.setQueryData(["project", projectId], {
+        ...previousData,
+        columnsWithTasks: oldColumns,
+      });
+
+      return { previousData };
+    },
+
+    onError: (_err, variables, context) => {
+      if (context?.previousData) {
+        queryClient.setQueryData(["project", projectId], context.previousData);
+      }
+    },
+  });
+
+ const reorderColumnsMutation = useMutation({
+  mutationFn: ({
+      projectId,
+      columnUpdates,
+    }: {
+      projectId: string;
+      columnUpdates: { id: string; sortOrder: number }[];
+    }) => 
+    reorderColumns(projectId, columnUpdates),
+
+  onMutate: async ({ projectId, columnUpdates }) => {
+    await queryClient.cancelQueries({ queryKey: ["project", projectId] });
+
+    const previousData = queryClient.getQueryData(["project", projectId]);
+    if (!previousData) return { previousData: undefined };
+
+    queryClient.setQueryData(["project", projectId], (old: any) => {
+      if (!old || !Array.isArray(old.columnsWithTasks)) return old;
+
+      const updated = [...old.columnsWithTasks]
+        .map((col) => {
+          const u = columnUpdates.find((c) => c.id === col.id);
+          return u ? { ...col, sortOrder: u.sortOrder } : col;
+        })
+        .sort((a, b) => a.sortOrder - b.sortOrder);
+
+      return { ...old, columnsWithTasks: updated };
+    });
+
+    return { previousData };
+  },
+
+  onError: (err, variables, context) => {
+    if (context?.previousData) {
+      queryClient.setQueryData(
+        ["project", variables.projectId], 
+        context.previousData
+      );
+    }
+  },
+});
+
   return {
     project,
     columns,
@@ -350,5 +433,7 @@ export function useProject(projectId: string) {
     createTask: createTaskMutation.mutate,
     moveTask: moveTaskMutation.mutate,
     setTaskComplete: setCompleteMutation.mutate,
+    reorderTask: reorderTasksMutation.mutate,
+    reorderColumns: reorderColumnsMutation.mutate
   };
 }

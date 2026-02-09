@@ -195,16 +195,16 @@ async function getTasksByProject(projectId: string): Promise<Task[]> {
   }
 }
 
-async function createTask(task: Omit<Task, "id" | "createdAt" | "assignedTo">) {
+async function createTask(task: {title: string, columnId: string, sortOrder: number}) {
   try {
     const data = await prisma.tasks.create({
       data: {
         title: task.title,
-        description: task.description,
-        dueDate: task.dueDate,
+        // description: task.description,
+        // dueDate: task.dueDate,
         columnId: task.columnId,
         sortOrder: task.sortOrder,
-        priority: task.priority,
+        // priority: task.priority,
       },
     });
     return data;
