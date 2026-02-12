@@ -74,8 +74,7 @@ async function updateProject(
 // ---Column Services---
 
 async function createColumn(
-  column: Omit<Column, "id" | "createdAt">
-): Promise<Column> {
+  column: {projectId: string, title: string, sortOrder: number}) {
   try {
     const data = await prisma.columns.create({
       data: {

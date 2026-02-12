@@ -163,6 +163,8 @@ export function useProject(projectId: string) {
 
       const previousData = queryClient.getQueryData(["project", projectId]);
 
+      const tempId = `temp-${Date.now()}`;
+
       queryClient.setQueryData(["project", projectId], (old: any) => {
         if (!old) return old;
 
@@ -170,7 +172,7 @@ export function useProject(projectId: string) {
           ...old,
           columnsWithTasks: old.columnsWithTasks.map((col: ColumnWithTasks) =>
             col.id === newTask.columnId
-              ? { ...col, tasks: [...col.tasks, newTask] }
+              ? { ...col, tasks: [...col.tasks, { ...newTask, id: tempId}] }
               : col,
           ),
         };
@@ -431,6 +433,7 @@ export function useProject(projectId: string) {
     updateProjectTitle: updateProjectTitle.mutate,
     updateColumnTitle: updateColumnTitle.mutate,
     createTask: createTaskMutation.mutate,
+    createColumn: createColumnMutation.mutate,
     moveTask: moveTaskMutation.mutate,
     setTaskComplete: setCompleteMutation.mutate,
     reorderTask: reorderTasksMutation.mutate,

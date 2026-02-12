@@ -10,7 +10,7 @@ export async function middleware(req: NextRequest) {
   // const sessionCookie = getSessionCookie(req); // checking just for the existence of a session
 
   const session = await auth.api.getSession({
-    headers: await headers() // you need to pass the headers object.
+    headers: req.headers // you need to pass the headers object.
 })
   const res = NextResponse.next();
 

@@ -19,7 +19,11 @@ import {
 } from "@/components/ui/dialog";
 import { ColumnWithTasks, Task } from "@/config/model";
 import { DragDropContext, Draggable, Droppable } from "@hello-pangea/dnd";
-import { reorderColumns, reorderTasks, setComplete } from "@/app/actions/services";
+import {
+  reorderColumns,
+  reorderTasks,
+  setComplete,
+} from "@/app/actions/services";
 import useCardModal from "@/hooks/use-task-modal";
 import { MdKeyboardArrowLeft } from "react-icons/md";
 import { useQueryClient } from "@tanstack/react-query";
@@ -34,6 +38,7 @@ const Page = () => {
     error,
     updateProjectTitle,
     createTask,
+    createColumn,
     updateColumnTitle,
     setTaskComplete,
     reorderTask,
@@ -60,13 +65,9 @@ const Page = () => {
 
   const [dragActiveTask, setDragActiveTask] = useState<Task | null>(null);
 
-
-
   const onFilterClick = () => {
     setIsFilterOpen(true);
   };
-
-
 
   useEffect(() => {
     if (project?.title) {
@@ -115,16 +116,6 @@ const Page = () => {
       console.log(error);
     }
     setIsEditingProjectTitle(false);
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter") {
-      handleProjectTitleSubmit();
-    }
-  };
-
-  const handleBlur = () => {
-    handleProjectTitleSubmit();
   };
 
   // async function createTask(taskData: {
@@ -183,11 +174,14 @@ const Page = () => {
 
       try {
         setReorderingColumns(true);
-        reorderColumns({projectId: project!.id, columnUpdates: reorderedColumns});
+        reorderColumns({
+          projectId: project!.id,
+          columnUpdates: reorderedColumns,
+        });
         setReorderingColumns(false);
       } catch (err) {
         console.error("Error reordering columns:", err);
-      } finally{
+      } finally {
         setIsReorderingColumns(false);
       }
 
@@ -201,8 +195,10 @@ const Page = () => {
 
       if (source.droppableId === destination.droppableId) {
         // Reordering within the same column
-        const column = serverColumns.find((col) => col.id === source.droppableId);
-        if (!column){
+        const column = serverColumns.find(
+          (col) => col.id === source.droppableId,
+        );
+        if (!column) {
           setReorderingTasks(false);
           return;
         }
@@ -259,7 +255,7 @@ const Page = () => {
       // actual db update
       try {
         setReorderingTasks(true);
-        reorderTask(reorderdTasks)
+        reorderTask(reorderdTasks);
         setReorderingTasks(false);
       } catch (err) {
         console.error("Error reordering tasks:", err);
@@ -310,7 +306,7 @@ const Page = () => {
     const handleSave = async (newTitle: string) => {
       const trimmed = (newTitle || "").trim();
       if (!trimmed) {
-        if(columnTitleRef.current){
+        if (columnTitleRef.current) {
           columnTitleRef.current.textContent = localColumnTitle;
         }
         setIsEditingColumnTitle(false);
@@ -334,9 +330,16 @@ const Page = () => {
     };
 
     async function handleCreateTask() {
+      if (!taskTitle.trim()) return;
       try {
+        setIsAddingTask(true);
+        createTask({
+          title: taskTitle,
+          columnId: column.id,
+          sortOrder: column.tasks.length,
+        });
+        setTaskTitle("");
         setIsAddingTask(false);
-        createTask({ title: taskTitle, columnId: column.id, sortOrder: column.tasks.length++ })
       } catch (err) {
         console.error(err);
       }
@@ -349,11 +352,11 @@ const Page = () => {
             <Card
               {...provided.draggableProps}
               ref={provided.innerRef}
-              className="w-full sm:flex-shrink-0 sm:w-75 h-fit p-2 rounded-lg bg-zinc-100 dark:bg-zinc-950 shadow-xs shadow-gray-500 dark:shadow-none"
+              className="w-full sm:flex-shrink-0 sm:w-75 h-fit p-2 rounded-[6px] bg-zinc-100 dark:bg-black/40 shadow-xs shadow-gray-500 dark:shadow-none"
             >
               <div
                 {...provided.dragHandleProps}
-                className="flex items-center justify-between"
+                className="flex items-center justify-between mb-2"
               >
                 <div className="p-1">
                   <span
@@ -379,7 +382,7 @@ const Page = () => {
                         setIsEditingColumnTitle(false);
                       }
                     }}
-                    className={`text-lg w-full block font-bold px-2 py-1 trunacate whitespace-nowrap rounded-[4px] focus:outline-1 focus:outline-blue-500 hover:bg-black/10 dark:hover:bg-zinc-900 leading-snug ${
+                    className={`text-lg w-full block font-[inter-bold] px-2 py-1 rounded-[4px] focus:outline-1 focus:outline-blue-500 hover:bg-black/10 dark:hover:bg-white/10 leading-snug break-words ${
                       !isEditingColumnTitle
                         ? "hover:cursor-pointer"
                         : "focus:cursor-text bg-white dark:bg-zinc-800"
@@ -419,7 +422,7 @@ const Page = () => {
                 <div className="p-1">
                   <Button
                     variant="ghost"
-                    className="w-full"
+                    className="w-full rounded-[4px]"
                     onClick={() => setIsAddingTask(true)}
                   >
                     <Plus size={15} />
@@ -433,19 +436,19 @@ const Page = () => {
                     id=""
                     value={taskTitle}
                     onChange={(e) => setTaskTitle(e.target.value)}
-                    className="resize-none w-full px-2 py-2 rounded-sm bg-zinc-50 dark:bg-zinc-800 border not-hover:border-blue-500 outline-none font-[inter] "
+                    className="resize-none w-full px-2 py-2 rounded-[4px] bg-zinc-50 dark:bg-zinc-800 border not-hover:border-blue-500 outline-none font-[inter] "
                     autoFocus
                   ></textarea>
                   <div className="flex space-x-2 items-center">
                     <Button
-                      className="bg-blue-400 hover:bg-blue-300 text-zinc-900"
+                      className="bg-blue-400 rounded-[4px] hover:bg-blue-300 text-zinc-900"
                       onClick={handleCreateTask}
                     >
                       Add Task
                     </Button>
                     <Button
                       variant="ghost"
-                      className="h-full p-2"
+                      className="h-full p-2 rounded-[4px]"
                       onClick={() => {
                         setIsAddingTask(false);
                         setTaskTitle("");
@@ -495,19 +498,18 @@ const Page = () => {
         {(provided) => (
           <div
             {...provided.draggableProps}
-            
             ref={provided.innerRef}
             className="group"
           >
-            <Card
-              className="relative flex items-center gap-2 rounded-sm mx-1 dark:bg-zinc-800 bg-[#f5f9ff] hover:cursor-pointer shadow-xs border-none shadow-gray-400 dark:shadow-none"
-              
-            >
+            <Card className="relative flex items-center gap-2 rounded-[4px] mx-1 dark:bg-zinc-800 bg-[#f5f9ff] hover:cursor-pointer shadow-xs border-none shadow-gray-400 dark:shadow-none">
               <div
                 id="sliding checkbox"
                 onPointerDown={(e) => {
                   e.stopPropagation();
-                  setTaskComplete({taskId: taskId, completed: !taskCompleted})
+                  setTaskComplete({
+                    taskId: taskId,
+                    completed: !taskCompleted,
+                  });
                 }}
                 className={`absolute h-4 w-4 ml-2 rounded-full border-1 border-zinc-900 dark:border-white flex items-center justify-center opacity-0 transition-all duration-200 group-hover:opacity-100  ${
                   taskCompleted
@@ -520,12 +522,12 @@ const Page = () => {
                 )}
               </div>
               <p
-              {...provided.dragHandleProps}
-              onClick={() => {
-                cardModal.onOpen(taskId);
-              }}
+                {...provided.dragHandleProps}
+                onClick={() => {
+                  cardModal.onOpen(taskId);
+                }}
                 className={`transition-all w-full p-2 duration-200 group-hover:translate-x-5 ${
-                  taskCompleted? "translate-x-5" : ""
+                  taskCompleted ? "translate-x-5" : ""
                 }`}
               >
                 {taskTitle}
@@ -548,27 +550,25 @@ const Page = () => {
     );
   }
 
-  async function handleNewColumnFormSubmit(formData: FormData) {
+
+
+  function handleCreateNewColumn(formData: FormData) {
     const newColumnTitle = formData.get("title") as string;
-    await createNewColumn(newColumnTitle);
-    setIsAddingColumn(false);
+    const projectId = project!.id;
+    const sortOrder = serverColumns.length;
+
+    try {
+      createColumn({ projectId, title: newColumnTitle, sortOrder });
+      setIsAddingColumn(false);
+    } catch (err) {
+      console.error("Error creating column:", err);
+    }
   }
 
-  // function TaskOverlay({ activeTask }: { activeTask: Task }) {
-  //   return (
-  //     <div>
-  //       <Card className="p-2 rounded-sm mx-1 dark:bg-zinc-800 bg-zinc-100 hover:cursor-grabbing rotate-3 [mask-image:radial-gradient(circle,_white_30%,_transparent_100%)] ">
-  //         {activeTask.title}
-  //       </Card>
-  //     </div>
-  //   );
-  // }
-  //Drag functions
-  // Track which task is being dragged (optional UI highlight)
 
   return (
     <div className="h-screen max-w-[100vw] font-[inter] flex flex-col items-center">
-      <Header visible={true} />
+      <Header visible={true}/>
       {/* Everything after header */}
       <motion.section
         initial={{ opacity: 0 }}
@@ -608,7 +608,7 @@ const Page = () => {
                   setIsEditingProjectTitle(false);
                 }
               }}
-              className="text-2xl font-bold tracking-wide mx-5 p-1 px-2 max-w-[90%] truncate whitespace-nowrap rounded-[4px] focus:outline-1 focus:outline-blue-500 hover:bg-black/10 dark:hover:bg-zinc-700 hover:cursor-pointer focus:cursor-text"
+              className="text-2xl font-bold tracking-wide mx-5 p-1 px-2 max-w-[90%] truncate whitespace-nowrap rounded-[4px] focus:outline-1 focus:outline-blue-500 hover:bg-black/10 dark:hover:bg-white/10 hover:cursor-pointer focus:cursor-text"
             >
               {localProjectTitle}
             </span>
@@ -729,27 +729,27 @@ const Page = () => {
                   onSubmit={(e) => {
                     e.preventDefault();
                     const formData = new FormData(e.currentTarget);
-                    handleNewColumnFormSubmit(formData);
+                    handleCreateNewColumn(formData);
                   }}
                 >
-                  <Card className="w-full sm:w-75 p-2 mx-2 space-y-4 rounded-lg bg-zinc-100 dark:bg-zinc-950 shadow-md shadow-gray-300 dark:shadow-none">
+                  <Card className="w-full sm:w-75 p-2 mx-2 space-y-4 rounded-[6px] bg-zinc-100 dark:bg-zinc-950 shadow-md shadow-gray-300 dark:shadow-none">
                     <input
                       name="title"
                       id=""
                       placeholder="Enter column title"
-                      className="resize-none text-md w-full px-3 py-2 rounded-sm bg-zinc-50 dark:bg-zinc-800 border not-hover:border-blue-500 outline-none font-[inter] "
+                      className="resize-none text-md w-full px-3 py-2 rounded-[4px] bg-zinc-50 dark:bg-zinc-800 border not-hover:border-blue-500 outline-none font-[inter] "
                       autoFocus
                     ></input>
                     <div className="flex space-x-2 items-center">
                       <Button
                         type="submit"
-                        className="bg-blue-400 hover:bg-blue-300 text-zinc-900"
+                        className="bg-blue-400 rounded-[4px] hover:bg-blue-300 text-zinc-900"
                       >
                         Add Column
                       </Button>
                       <Button
                         variant="ghost"
-                        className="h-full p-2"
+                        className="h-full p-2 rounded-[4px]"
                         onClick={() => setIsAddingColumn(false)}
                       >
                         <X size={15} />
@@ -760,7 +760,7 @@ const Page = () => {
               ) : (
                 <button
                   onClick={() => setIsAddingColumn(true)}
-                  className="p-3 rounded-md bg-zinc-300 hover:bg-zinc-300/50 dark:bg-white/20 dark:hover:bg-white/10 backdrop-blur-[2px] text-md sm:flex-shrink-0 h-10 sm:w-75 flex items-center justify-center hover:cursor-pointer gap-1 mx-2"
+                  className="p-3 rounded-[6px] bg-zinc-300 hover:bg-zinc-300/50 dark:bg-white/20 dark:hover:bg-white/10 backdrop-blur-[2px] text-md sm:flex-shrink-0 h-10 sm:w-75 flex items-center justify-center hover:cursor-pointer gap-1 mx-2"
                 >
                   <Plus size={15} />
                   Add a column
