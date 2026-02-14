@@ -3,6 +3,7 @@ export interface Project{
     title: string | null;
     description: string | null;
     color: string | null;
+    status: "active" | "completed" | "closed";
     userId: string;
     createdAt: Date;
     updatedAt: Date;

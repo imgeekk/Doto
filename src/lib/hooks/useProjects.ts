@@ -23,7 +23,7 @@ export function useProjects() {
   const userId = data?.user.id;
 
   const {
-    data: projects = [],
+    data: projects,
     isLoading,
     error,
   } = useQuery({
@@ -43,10 +43,55 @@ export function useProjects() {
         userId: userId!,
       }),
 
-    onSuccess: () => {
-      queryClient.invalidateQueries({
+    onMutate: async (projectData) => {
+      await queryClient.cancelQueries({
         queryKey: ["projects", userId],
       });
+
+      const previousData = queryClient.getQueryData(["projects", userId]);
+
+      const tempId = `temp-${Date.now()}`;
+      const optimisticProject = {
+        id: tempId,
+        title: projectData.title,
+        description: projectData.description || null,
+        color: projectData.color || null,
+        status: "active",
+        userId: userId!,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        isOptimistic: true,
+      };
+
+      queryClient.setQueryData(["projects", userId], (old: any) => {
+        if (!old) return [optimisticProject]; // return new array if no previous projects
+
+        return [...old, optimisticProject];
+      });
+
+      const afterUpdate = queryClient.getQueryData(["projects", userId]);
+  console.log("After optimistic update:", afterUpdate);
+      return { previousData, tempId };
+    },
+
+    onError: (_err, _vars, context) => {
+      if(context?.previousData) {
+        queryClient.setQueryData(["projects", userId], context.previousData);
+      }
+    },  
+
+    onSuccess: (result, variables, context) => {
+      console.log("Before success update:", 
+    queryClient.getQueryData(["projects", userId])
+  );
+      queryClient.setQueryData(["projects", userId], (old: any) => {
+        if (!old) return old;
+
+        return old.map((proj: Project) => (proj.id) === context?.tempId ? result : proj);
+      });
+
+      console.log("After success update:", queryClient.getQueryData(["projects", userId])
+  );
     },
   });
 

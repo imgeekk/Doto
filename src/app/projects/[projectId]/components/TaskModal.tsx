@@ -2,17 +2,17 @@
 
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import RippleWaveLoader from "@/components/ui/ripple-loader";
-import useCardModal from "@/hooks/use-task-modal";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams } from "next/navigation";
 import { ComponentRef, useEffect, useRef, useState } from "react";
 import { MdKeyboardArrowDown } from "react-icons/md";
 import { updateTaskTitle } from "@/app/actions/services";
+import useTaskModal from "@/hooks/use-task-modal";
 
 const TaskModal = () => {
-  const id = useCardModal((state) => state.id);
-  const isOpen = useCardModal((state) => state.isOpen);
-  const onClose = useCardModal((state) => state.onClose);
+  const id = useTaskModal((state) => state.id);
+  const isOpen = useTaskModal((state) => state.isOpen);
+  const onClose = useTaskModal((state) => state.onClose);
 
   const queryClient = useQueryClient();
   const params = useParams();

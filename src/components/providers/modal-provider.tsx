@@ -1,6 +1,7 @@
 "use client";
 
 import TaskModal from "@/app/projects/[projectId]/components/TaskModal";
+import CreateProjectModal from "@/app/projects/CreateProjectModal";
 import { useEffect, useState } from "react";
 
 const ModalProvider = () => {
@@ -16,6 +17,7 @@ const ModalProvider = () => {
   return (
     <>
       <TaskModal />
+      <CreateProjectModal />
     </>
   );
 };

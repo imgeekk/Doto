@@ -19,14 +19,9 @@ import {
 } from "@/components/ui/dialog";
 import { ColumnWithTasks, Task } from "@/config/model";
 import { DragDropContext, Draggable, Droppable } from "@hello-pangea/dnd";
-import {
-  reorderColumns,
-  reorderTasks,
-  setComplete,
-} from "@/app/actions/services";
-import useCardModal from "@/hooks/use-task-modal";
 import { MdKeyboardArrowLeft } from "react-icons/md";
 import { useQueryClient } from "@tanstack/react-query";
+import useTaskModal from "@/hooks/use-task-modal";
 
 const Page = () => {
   const router = useRouter();
@@ -483,7 +478,7 @@ const Page = () => {
     const [addingTask, setAddingTask] = useState(false);
     const timeoutRef = useRef<NodeJS.Timeout | null>(null);
     const DEBOUNCE_DELAY_MS = 300; // Adjust delay as needed
-    const cardModal = useCardModal();
+    const taskModal = useTaskModal();
 
     React.useEffect(() => {
       return () => {
@@ -524,7 +519,7 @@ const Page = () => {
               <p
                 {...provided.dragHandleProps}
                 onClick={() => {
-                  cardModal.onOpen(taskId);
+                  taskModal.onOpen(taskId);
                 }}
                 className={`transition-all w-full p-2 duration-200 group-hover:translate-x-5 ${
                   taskCompleted ? "translate-x-5" : ""
@@ -568,7 +563,7 @@ const Page = () => {
 
   return (
     <div className="h-screen max-w-[100vw] font-[inter] flex flex-col items-center">
-      <Header visible={true}/>
+      <Header visible={true} className="mb-5"/>
       {/* Everything after header */}
       <motion.section
         initial={{ opacity: 0 }}
