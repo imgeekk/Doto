@@ -73,10 +73,17 @@ model Projects {
   title       String?
   description String?
   color       String?
+  status      projectStatus @default(active)
   userId      String
   updatedAt   DateTime  @default(now())
   columns     Columns[]
   user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+enum projectStatus {
+  active
+  completed
+  closed
 }
 
 model Columns {
