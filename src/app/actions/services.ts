@@ -34,9 +34,12 @@ async function getProject(projectId: string): Promise<Project | null> {
   }
 }
 
-async function createProject(
-  project: { title: string; description?: string; color?: string; userId: string }
-): Promise<Project> {
+async function createProject(project: {
+  title: string;
+  description?: string;
+  color?: string;
+  userId: string;
+}): Promise<Project> {
   try {
     const data = await prisma.projects.create({
       data: {
@@ -54,7 +57,7 @@ async function createProject(
 
 async function updateProject(
   projectId: string,
-  newTitle: string
+  newTitle: string,
 ): Promise<Project> {
   try {
     const project = await prisma.projects.update({
@@ -71,10 +74,7 @@ async function updateProject(
   }
 }
 
-
-async function deleteProject(
-  projectId: string,
-): Promise<Project> {
+async function deleteProject(projectId: string): Promise<Project> {
   try {
     const project = await prisma.projects.delete({
       where: {
@@ -89,8 +89,11 @@ async function deleteProject(
 
 // ---Column Services---
 
-async function createColumn(
-  column: {projectId: string, title: string, sortOrder: number}) {
+async function createColumn(column: {
+  projectId: string;
+  title: string;
+  sortOrder: number;
+}) {
   try {
     const data = await prisma.columns.create({
       data: {
@@ -108,9 +111,22 @@ async function createColumn(
   }
 }
 
+async function deleteColumn(columnId: string) {
+  try {
+    const data = await prisma.columns.delete({
+      where: {
+        id: columnId,
+      },
+    });
+    return data;
+  } catch (err) {
+    throw err;
+  }
+}
+
 async function updateColumn(
   columnId: string,
-  newTitle: string
+  newTitle: string,
 ): Promise<ColumnWithTasks> {
   try {
     const column = await prisma.columns.update({
@@ -146,7 +162,7 @@ async function updateColumn(
 //   }
 // }
 async function getColumnsWithTasks(
-  projectId: string
+  projectId: string,
 ): Promise<ColumnWithTasks[]> {
   try {
     const data = await prisma.columns.findMany({
@@ -172,15 +188,15 @@ async function getColumnsWithTasks(
 
 async function reorderColumns(
   projectId: string,
-  updates: { id: string, sortOrder: number }[]
+  updates: { id: string; sortOrder: number }[],
 ) {
   try {
     // Create an array of update promises for the transaction
-    const transaction = updates.map(update =>
+    const transaction = updates.map((update) =>
       prisma.columns.update({
         where: { id: update.id, projectId: projectId },
         data: { sortOrder: update.sortOrder },
-      })
+      }),
     );
     // Execute all updates atomically
     await prisma.$transaction(transaction);
@@ -210,7 +226,11 @@ async function getTasksByProject(projectId: string): Promise<Task[]> {
   }
 }
 
-async function createTask(task: {title: string, columnId: string, sortOrder: number}) {
+async function createTask(task: {
+  title: string;
+  columnId: string;
+  sortOrder: number;
+}) {
   try {
     const data = await prisma.tasks.create({
       data: {
@@ -247,7 +267,7 @@ async function setComplete(taskId: string, completed: boolean) {
 async function moveTaskToColumn(
   taskId: string,
   newColumnId: string,
-  newOrder: number
+  newOrder: number,
 ) {
   try {
     const data = await prisma.tasks.update({
@@ -266,7 +286,7 @@ async function moveTaskToColumn(
 }
 
 async function reorderTasks(
-  taskUpdates: { id: string; columnId: string; sortOrder: number }[]
+  taskUpdates: { id: string; columnId: string; sortOrder: number }[],
 ) {
   try {
     // Create an array of update promises for the transaction
@@ -277,7 +297,7 @@ async function reorderTasks(
           columnId: update.columnId,
           sortOrder: update.sortOrder,
         },
-      })
+      }),
     );
     // Execute all updates atomically
     await prisma.$transaction(transaction);
@@ -287,21 +307,18 @@ async function reorderTasks(
   }
 }
 
-async function updateTaskTitle(
-  newTitle: string,
-  taskId: string,
-){
-  try{
+async function updateTaskTitle(newTitle: string, taskId: string) {
+  try {
     const task = await prisma.tasks.update({
       where: {
-        id: taskId
+        id: taskId,
       },
       data: {
-        title: newTitle
-      }
+        title: newTitle,
+      },
     });
     return task;
-  } catch(err){
+  } catch (err) {
     throw err;
   }
 }
@@ -330,8 +347,8 @@ async function createProjectWithDefaultColumn(projectData: {
 
   await Promise.all(
     defaultColumns.map((column) =>
-      createColumn({ ...column, projectId: project.id })
-    )
+      createColumn({ ...column, projectId: project.id }),
+    ),
   );
 
   return project;
@@ -359,9 +376,10 @@ export {
   createTask,
   updateColumn,
   createColumn,
+  deleteColumn,
   setComplete,
   moveTaskToColumn,
   reorderColumns,
   reorderTasks,
-  updateTaskTitle
+  updateTaskTitle,
 };

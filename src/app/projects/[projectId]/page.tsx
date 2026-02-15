@@ -3,7 +3,7 @@
 import Header from "@/components/Header";
 import { Card, CardContent, CardTitle } from "@/components/ui/card";
 import { useProject } from "@/lib/hooks/useProjects";
-import { Check, MoreHorizontal, Plus, X } from "lucide-react";
+import { Check, Edit, MoreHorizontal, Plus, X } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import RippleWaveLoader from "@/components/ui/ripple-loader";
@@ -19,9 +19,17 @@ import {
 } from "@/components/ui/dialog";
 import { ColumnWithTasks, Task } from "@/config/model";
 import { DragDropContext, Draggable, Droppable } from "@hello-pangea/dnd";
-import { MdKeyboardArrowLeft } from "react-icons/md";
+import { MdDeleteOutline, MdKeyboardArrowLeft } from "react-icons/md";
 import { useQueryClient } from "@tanstack/react-query";
 import useTaskModal from "@/hooks/use-task-modal";
+import {
+  Dropdown,
+  DropdownTrigger,
+  DropdownContent,
+  DropdownItem,
+  DropdownSeparator,
+} from "@/components/basic-dropdown";
+import { BiWindowClose } from "react-icons/bi";
 
 const Page = () => {
   const router = useRouter();
@@ -34,6 +42,7 @@ const Page = () => {
     updateProjectTitle,
     createTask,
     createColumn,
+    deleteColumn,
     updateColumnTitle,
     setTaskComplete,
     reorderTask,
@@ -340,6 +349,10 @@ const Page = () => {
       }
     }
 
+    function handleDeleteColumn(columnId: string) {
+      deleteColumn(columnId);
+    }
+
     return (
       <Draggable draggableId={String(column.id)} index={index}>
         {(provided) => (
@@ -387,9 +400,23 @@ const Page = () => {
                   </span>
                 </div>
 
-                <Button variant="ghost">
-                  <MoreHorizontal size={15} />
-                </Button>
+                <Dropdown>
+                  <DropdownTrigger className="cursor-pointer">
+                    <Button variant="ghost">
+                      <MoreHorizontal size={15} />
+                    </Button>
+                  </DropdownTrigger>
+                  <DropdownContent align="end" className="w-26">
+                    <DropdownItem
+                      className="gap-2"
+                      destructive
+                      onClick={() => handleDeleteColumn(column.id)}
+                    >
+                      <MdDeleteOutline className="h-5 w-5" />
+                      <p className="">Delete</p>
+                    </DropdownItem>
+                  </DropdownContent>
+                </Dropdown>
               </div>
               <Droppable droppableId={String(column.id)} type="task">
                 {(provided) => (
@@ -545,8 +572,6 @@ const Page = () => {
     );
   }
 
-
-
   function handleCreateNewColumn(formData: FormData) {
     const newColumnTitle = formData.get("title") as string;
     const projectId = project!.id;
@@ -560,10 +585,9 @@ const Page = () => {
     }
   }
 
-
   return (
     <div className="h-screen max-w-[100vw] font-[inter] flex flex-col items-center">
-      <Header visible={true} className="mb-5"/>
+      <Header visible={true} className="mb-5" />
       {/* Everything after header */}
       <motion.section
         initial={{ opacity: 0 }}

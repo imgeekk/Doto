@@ -15,6 +15,7 @@ import {
   reorderTasks,
   reorderColumns,
   deleteProject,
+  deleteColumn,
 } from "@/app/actions/services";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
@@ -87,11 +88,10 @@ export function useProjects() {
           proj.id === context?.tempId ? result : proj,
         );
       });
-
     },
   });
 
-  const deleteProjectMutationte = useMutation({
+  const deleteProjectMutation = useMutation({
     mutationFn: (projectId: string) => deleteProject(projectId),
 
     onMutate: async (projectId) => {
@@ -102,7 +102,7 @@ export function useProjects() {
       const previousData = queryClient.getQueryData(["projects", userId]);
 
       queryClient.setQueryData(["projects", userId], (old: any) => {
-        if(!old) return old;
+        if (!old) return old;
         return old.filter((proj: Project) => proj.id !== projectId);
       });
 
@@ -110,7 +110,7 @@ export function useProjects() {
     },
 
     onError: (_err, _vars, context) => {
-      if(context?.previousData) {
+      if (context?.previousData) {
         queryClient.setQueryData(["projects", userId], context.previousData);
       }
     },
@@ -301,6 +301,36 @@ export function useProject(projectId: string) {
     },
   });
 
+  // delete column
+
+  const deleteColumnMutation = useMutation({
+    mutationFn: (columnId: string) => deleteColumn(columnId),
+
+    onMutate: async (columnId) => {
+      await queryClient.cancelQueries({
+        queryKey: ["project", projectId],
+      });
+
+      const previousData = queryClient.getQueryData(["project", projectId]);
+
+      queryClient.setQueryData(["project", projectId], (old: any) => {
+        if (!old) return old;
+
+        return {
+          ...old,
+          columnsWithTasks: old.columnsWithTasks.filter(
+            (col: ColumnWithTasks) => col.id !== columnId,
+          ),
+        };
+      });
+      return { previousData };
+    },
+
+    onError: (_err, _vars, context) => {
+      queryClient.setQueryData(["project", projectId], context?.previousData);
+    },
+  });
+
   // move task
 
   const moveTaskMutation = useMutation({
@@ -368,6 +398,7 @@ export function useProject(projectId: string) {
     }) => setComplete(taskId, completed),
 
     onMutate: async ({ taskId, completed }) => {
+      console.log("111111");
       await queryClient.cancelQueries({ queryKey: ["project", projectId] });
 
       const previousData = queryClient.getQueryData(["project", projectId]);
@@ -375,16 +406,17 @@ export function useProject(projectId: string) {
       queryClient.setQueryData(["project", projectId], (old: any) => {
         if (!old) return old;
 
-        const copy = structuredClone(old);
-
-        for (const col of copy.columnsWithTasks) {
-          const task = col.tasks.find((t: Task) => t.id === taskId);
-          if (task) {
-            task.completed = completed;
-            break;
-          }
-        }
-        return copy;
+        return {
+    ...old,
+    columnsWithTasks: old.columnsWithTasks.map((col: ColumnWithTasks) => ({
+      ...col,
+      tasks: col.tasks.map((task) =>
+        task.id === taskId
+          ? { ...task, completed }
+          : task
+      ),
+    })),
+  };
       });
 
       return { previousData };
@@ -395,6 +427,10 @@ export function useProject(projectId: string) {
         queryClient.setQueryData(["project", projectId], context.previousData);
       }
     },
+
+    onSuccess: () => {
+      console.log("22222");
+    }
   });
 
   const reorderTasksMutation = useMutation({
@@ -500,6 +536,7 @@ export function useProject(projectId: string) {
     updateColumnTitle: updateColumnTitle.mutate,
     createTask: createTaskMutation.mutate,
     createColumn: createColumnMutation.mutate,
+    deleteColumn: deleteColumnMutation.mutate,
     moveTask: moveTaskMutation.mutate,
     setTaskComplete: setCompleteMutation.mutate,
     reorderTask: reorderTasksMutation.mutate,
