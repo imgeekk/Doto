@@ -14,6 +14,7 @@ import {
   moveTaskToColumn,
   reorderTasks,
   reorderColumns,
+  deleteProject,
 } from "@/app/actions/services";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
@@ -69,29 +70,49 @@ export function useProjects() {
         return [...old, optimisticProject];
       });
 
-      const afterUpdate = queryClient.getQueryData(["projects", userId]);
-  console.log("After optimistic update:", afterUpdate);
       return { previousData, tempId };
+    },
+
+    onError: (_err, _vars, context) => {
+      if (context?.previousData) {
+        queryClient.setQueryData(["projects", userId], context.previousData);
+      }
+    },
+
+    onSuccess: (result, variables, context) => {
+      queryClient.setQueryData(["projects", userId], (old: any) => {
+        if (!old) return old;
+
+        return old.map((proj: Project) =>
+          proj.id === context?.tempId ? result : proj,
+        );
+      });
+
+    },
+  });
+
+  const deleteProjectMutationte = useMutation({
+    mutationFn: (projectId: string) => deleteProject(projectId),
+
+    onMutate: async (projectId) => {
+      await queryClient.cancelQueries({
+        queryKey: ["projects", userId],
+      });
+
+      const previousData = queryClient.getQueryData(["projects", userId]);
+
+      queryClient.setQueryData(["projects", userId], (old: any) => {
+        if(!old) return old;
+        return old.filter((proj: Project) => proj.id !== projectId);
+      });
+
+      return { previousData };
     },
 
     onError: (_err, _vars, context) => {
       if(context?.previousData) {
         queryClient.setQueryData(["projects", userId], context.previousData);
       }
-    },  
-
-    onSuccess: (result, variables, context) => {
-      console.log("Before success update:", 
-    queryClient.getQueryData(["projects", userId])
-  );
-      queryClient.setQueryData(["projects", userId], (old: any) => {
-        if (!old) return old;
-
-        return old.map((proj: Project) => (proj.id) === context?.tempId ? result : proj);
-      });
-
-      console.log("After success update:", queryClient.getQueryData(["projects", userId])
-  );
     },
   });
 
@@ -100,6 +121,7 @@ export function useProjects() {
     isLoading,
     error,
     createProject: createProject.mutateAsync,
+    deleteProject: deleteProjectMutation.mutateAsync,
   };
 }
 
@@ -217,7 +239,7 @@ export function useProject(projectId: string) {
           ...old,
           columnsWithTasks: old.columnsWithTasks.map((col: ColumnWithTasks) =>
             col.id === newTask.columnId
-              ? { ...col, tasks: [...col.tasks, { ...newTask, id: tempId}] }
+              ? { ...col, tasks: [...col.tasks, { ...newTask, id: tempId }] }
               : col,
           ),
         };
@@ -428,47 +450,46 @@ export function useProject(projectId: string) {
     },
   });
 
- const reorderColumnsMutation = useMutation({
-  mutationFn: ({
+  const reorderColumnsMutation = useMutation({
+    mutationFn: ({
       projectId,
       columnUpdates,
     }: {
       projectId: string;
       columnUpdates: { id: string; sortOrder: number }[];
-    }) => 
-    reorderColumns(projectId, columnUpdates),
+    }) => reorderColumns(projectId, columnUpdates),
 
-  onMutate: async ({ projectId, columnUpdates }) => {
-    await queryClient.cancelQueries({ queryKey: ["project", projectId] });
+    onMutate: async ({ projectId, columnUpdates }) => {
+      await queryClient.cancelQueries({ queryKey: ["project", projectId] });
 
-    const previousData = queryClient.getQueryData(["project", projectId]);
-    if (!previousData) return { previousData: undefined };
+      const previousData = queryClient.getQueryData(["project", projectId]);
+      if (!previousData) return { previousData: undefined };
 
-    queryClient.setQueryData(["project", projectId], (old: any) => {
-      if (!old || !Array.isArray(old.columnsWithTasks)) return old;
+      queryClient.setQueryData(["project", projectId], (old: any) => {
+        if (!old || !Array.isArray(old.columnsWithTasks)) return old;
 
-      const updated = [...old.columnsWithTasks]
-        .map((col) => {
-          const u = columnUpdates.find((c) => c.id === col.id);
-          return u ? { ...col, sortOrder: u.sortOrder } : col;
-        })
-        .sort((a, b) => a.sortOrder - b.sortOrder);
+        const updated = [...old.columnsWithTasks]
+          .map((col) => {
+            const u = columnUpdates.find((c) => c.id === col.id);
+            return u ? { ...col, sortOrder: u.sortOrder } : col;
+          })
+          .sort((a, b) => a.sortOrder - b.sortOrder);
 
-      return { ...old, columnsWithTasks: updated };
-    });
+        return { ...old, columnsWithTasks: updated };
+      });
 
-    return { previousData };
-  },
+      return { previousData };
+    },
 
-  onError: (err, variables, context) => {
-    if (context?.previousData) {
-      queryClient.setQueryData(
-        ["project", variables.projectId], 
-        context.previousData
-      );
-    }
-  },
-});
+    onError: (err, variables, context) => {
+      if (context?.previousData) {
+        queryClient.setQueryData(
+          ["project", variables.projectId],
+          context.previousData,
+        );
+      }
+    },
+  });
 
   return {
     project,
@@ -482,6 +503,6 @@ export function useProject(projectId: string) {
     moveTask: moveTaskMutation.mutate,
     setTaskComplete: setCompleteMutation.mutate,
     reorderTask: reorderTasksMutation.mutate,
-    reorderColumns: reorderColumnsMutation.mutate
+    reorderColumns: reorderColumnsMutation.mutate,
   };
 }

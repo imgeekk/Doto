@@ -12,7 +12,7 @@ const Page = () => {
   return (
     <FadeContent
       blur={true}
-      duration={500}
+      duration={100}
       easing="ease-out"
       initialOpacity={30}
     >

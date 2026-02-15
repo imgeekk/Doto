@@ -1,7 +1,13 @@
-const loading = () => {
-  return (
-    <div className="h-screen w-full bg-red-600">loading</div>
-  )
-}
+"use client";
 
-export default loading
+import RippleWaveLoader from "@/components/ui/ripple-loader";
+
+const Loading = () => {
+  return (
+    <div className="h-screen w-full flex items-center justify-center">
+      <RippleWaveLoader />‎ 
+    </div>
+  );
+};
+
+export default Loading;

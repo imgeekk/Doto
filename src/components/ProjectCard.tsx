@@ -16,8 +16,10 @@ import { motion } from "framer-motion";
 
 const ProjectCard = ({
   project,
+  deleteProject,
 }: {
   project: Project & { isOptimistic?: boolean };
+  deleteProject: (id: string) => void;
 }) => {
   const router = useRouter();
   const MotionCard = motion.create(Card);
@@ -58,6 +60,10 @@ const ProjectCard = ({
       </MotionCard>
     );
   }
+
+  const handleDeleteProject = (projectId: string) => {
+    deleteProject(projectId);
+  }
   return (
     <Card className="flex p-2 border-1 mb-5 rounded-[4px]">
       <div
@@ -95,7 +101,9 @@ const ProjectCard = ({
               Close Project
             </DropdownItem>
             <DropdownSeparator />
-            <DropdownItem className="gap-2" destructive>
+            <DropdownItem className="gap-2" destructive
+            onClick={() => handleDeleteProject(project.id)}
+            >
               <MdDeleteOutline className="h-5 w-5" />
               <p className="">Delete</p>
             </DropdownItem>

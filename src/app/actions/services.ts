@@ -35,7 +35,7 @@ async function getProject(projectId: string): Promise<Project | null> {
 }
 
 async function createProject(
-  project: Omit<Project, "id" | "createdAt" | "updatedAt">
+  project: { title: string; description?: string; color?: string; userId: string }
 ): Promise<Project> {
   try {
     const data = await prisma.projects.create({
@@ -63,6 +63,22 @@ async function updateProject(
       },
       data: {
         title: newTitle,
+      },
+    });
+    return project;
+  } catch (err) {
+    throw err;
+  }
+}
+
+
+async function deleteProject(
+  projectId: string,
+): Promise<Project> {
+  try {
+    const project = await prisma.projects.delete({
+      where: {
+        id: projectId,
       },
     });
     return project;
@@ -300,7 +316,7 @@ async function createProjectWithDefaultColumn(projectData: {
 }) {
   const project = await createProject({
     title: projectData.title,
-    description: projectData.description || null,
+    description: projectData.description,
     color: projectData.color || "bg-blue-500",
     userId: projectData.userId,
   });
@@ -336,6 +352,7 @@ async function getProjectsWithColumns(projectId: string) {
 
 export {
   createProjectWithDefaultColumn,
+  deleteProject,
   getProjects,
   getProjectsWithColumns,
   updateProject,

@@ -9,7 +9,7 @@ import { useProjects } from "@/lib/hooks/useProjects";
 import RippleWaveLoader from "@/components/ui/ripple-loader";
 
 function ProjectsTabs({ userId }: { userId: string }) {
-  const { createProject, projects, isLoading, error } = useProjects();
+  const { createProject, deleteProject, projects, isLoading, error } = useProjects();
 
   const createProjectModal = useCreateProjectModal();
   function handleCreateNewColumn() {}
@@ -110,7 +110,7 @@ function ProjectsTabs({ userId }: { userId: string }) {
               <p>No active projects</p>
             ) : (
               activeProjects.map((project) => (
-                <ProjectCard key={project.id} project={project} />
+                <ProjectCard key={project.id} project={project} deleteProject={deleteProject} />
               ))
             )}
           </section>
@@ -129,7 +129,7 @@ function ProjectsTabs({ userId }: { userId: string }) {
               </p>
             ) : (
               closedProjects.map((project) => (
-                <ProjectCard key={project.id} project={project} />
+                <ProjectCard key={project.id} project={project} deleteProject={deleteProject} />
               ))
             )}
           </section>
@@ -146,7 +146,7 @@ function ProjectsTabs({ userId }: { userId: string }) {
               <p>No projects</p>
             ) : (
               projects.map((project) => (
-                <ProjectCard key={project.id} project={project} />
+                <ProjectCard key={project.id} project={project} deleteProject={deleteProject} />
               ))
             )}
           </section>
