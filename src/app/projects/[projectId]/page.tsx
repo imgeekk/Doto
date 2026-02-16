@@ -29,7 +29,7 @@ import {
   DropdownItem,
   DropdownSeparator,
 } from "@/components/basic-dropdown";
-import { BiWindowClose } from "react-icons/bi";
+import { reorderColumns, reorderTasks } from "@/app/actions/services";
 
 const Page = () => {
   const router = useRouter();
@@ -45,11 +45,17 @@ const Page = () => {
     deleteColumn,
     updateColumnTitle,
     setTaskComplete,
-    reorderTask,
-    reorderColumns,
     moveTask,
     // createNewColumn,
   } = useProject(params.projectId);
+
+  const [localColumns, setLocalColumns] = useState<ColumnWithTasks[]>(columns || []);
+
+  useEffect(() => {
+    if(columns) {
+      setLocalColumns(columns);
+    }
+  }, [columns])
 
   const [isEditingProjectTitle, setIsEditingProjectTitle] = useState(false);
   const [localProjectTitle, setLocalProjectTitle] = useState(project?.title);
@@ -148,6 +154,8 @@ const Page = () => {
   //   }
   // }
 
+
+  const queryClient = useQueryClient();
   const onDragEnd = async (result: any) => {
     const { source, destination, type } = result;
 
@@ -165,105 +173,99 @@ const Page = () => {
 
     // Handle column reordering
     if (type === "column") {
-      const newColumns = Array.from(columns);
+
+      const newColumns = [...columns];
       const [movedColumn] = newColumns.splice(source.index, 1);
       newColumns.splice(destination.index, 0, movedColumn);
-      setIsReorderingColumns(true);
 
-      //db update preparation
-      const reorderedColumns = newColumns.map((col, index) => ({
+      //local update
+      setLocalColumns(newColumns);
+
+      //db update
+      const columnUpdates = newColumns.map((col, index) => ({
         id: col.id,
         sortOrder: index,
       }));
 
-      try {
-        setReorderingColumns(true);
-        reorderColumns({
-          projectId: project!.id,
-          columnUpdates: reorderedColumns,
-        });
-        setReorderingColumns(false);
-      } catch (err) {
-        console.error("Error reordering columns:", err);
-      } finally {
-        setIsReorderingColumns(false);
-      }
+      await reorderColumns(project!.id, columnUpdates);
 
-      return;
+      queryClient.setQueryData(["projects", project!.id], (old: any) => {
+        if (!old) return old;
+
+        return {
+          ...old,
+          columns: newColumns,
+        }
+      })
+
+     return;
     }
 
     // Handle task reordering
     if (type === "task") {
-      setIsReorderingTasks(true);
-      let reorderdTasks = [];
 
-      if (source.droppableId === destination.droppableId) {
-        // Reordering within the same column
-        const column = columns.find(
-          (col) => col.id === source.droppableId,
-        );
-        if (!column) {
-          setReorderingTasks(false);
-          return;
-        }
-        const newTasks = Array.from(column.tasks);
+      const newColumns = [...columns];
+
+      const sourceColumnIndex = newColumns.findIndex(
+        (col) => col.id === source.droppableId,
+      );
+      const destinationColumnIndex = newColumns.findIndex(
+        (col) => col.id === destination.droppableId,
+      );
+
+      const sourceCol = newColumns[sourceColumnIndex];
+      const destinationCol = newColumns[destinationColumnIndex];
+
+      //same column reordering
+      if(sourceColumnIndex === destinationColumnIndex) {
+        const newTasks = [...sourceCol.tasks];
         const [movedTask] = newTasks.splice(source.index, 1);
         newTasks.splice(destination.index, 0, movedTask);
-        const newColumns = columns.map((col) =>
-          column && col.id === column.id ? { ...col, tasks: newTasks } : col,
-        );
+        newColumns[sourceColumnIndex].tasks = newTasks;
 
-        //db update preparation
-        reorderdTasks = newTasks.map((task, index) => ({
-          id: task.id,
-          columnId: column.id,
-          sortOrder: index,
-        }));
-      } else {
-        // Moving task between columns
-        const sourceColumn = columns.find(
-          (col) => col.id === source.droppableId,
-        );
-        const destColumn = columns.find(
-          (col) => col.id === destination.droppableId,
-        );
-        if (!sourceColumn || !destColumn) return;
-        const sourceTasks = Array.from(sourceColumn.tasks);
-        const destTasks = Array.from(destColumn.tasks);
+        newColumns[sourceColumnIndex].tasks = newTasks;
+      }
+
+      //different column reordering
+      else{
+        const sourceTasks = [...sourceCol.tasks];
+        const destTasks = [...destinationCol.tasks];
+
         const [movedTask] = sourceTasks.splice(source.index, 1);
         destTasks.splice(destination.index, 0, movedTask);
-        const newColumns = columns.map((col) => {
-          if (col.id === sourceColumn.id) {
-            return { ...col, tasks: sourceTasks };
-          }
-          if (col.id === destColumn.id) {
-            return { ...col, tasks: destTasks };
-          }
-          return col;
-        });
 
-        //db update preparation
-        const updatedDestinationTasks = destTasks.map((task, index) => ({
-          id: task.id,
-          columnId: destColumn.id,
-          sortOrder: index,
-        }));
-        const updatedSourceTasks = sourceTasks.map((task, index) => ({
-          id: task.id,
-          columnId: sourceColumn.id,
-          sortOrder: index,
-        }));
-        reorderdTasks = [...updatedDestinationTasks, ...updatedSourceTasks];
+        newColumns[sourceColumnIndex].tasks = sourceTasks;
+        newColumns[destinationColumnIndex].tasks = destTasks;
       }
 
-      // actual db update
-      try {
-        setReorderingTasks(true);
-        reorderTask(reorderdTasks);
-        setReorderingTasks(false);
-      } catch (err) {
-        console.error("Error reordering tasks:", err);
-      }
+      // local update
+      setLocalColumns(newColumns);
+
+      // db update
+      const updates: {id: string, columnId: string, sortOrder: number}[] = [];
+
+
+      newColumns.forEach((col: ColumnWithTasks) => {
+        col.tasks.forEach((task: Task, index: number) => {
+          updates.push({
+            id: task.id,
+            columnId: col.id,
+            sortOrder: index,
+          })
+        })
+      })
+
+      await reorderTasks(updates);
+
+      queryClient.setQueryData(["projects", project!.id], (old: any) => {
+        if (!old) return old;
+
+        return {
+          ...old,
+          columns: newColumns,
+        }
+      })
+      return;
     }
   };
 
@@ -284,11 +286,13 @@ const Page = () => {
     const [isAddingTask, setIsAddingTask] = useState(false);
     const [taskTitle, setTaskTitle] = useState("");
 
+    const hasHydrated = useRef(false);
     useEffect(() => {
-      if (column.title) {
-        setLocalColumnTitle(column.title);
+      if (!hasHydrated.current) {
+        setLocalColumns(columns);
+        hasHydrated.current = true;
       }
-    }, [column.title]);
+    }, [columns]);
 
     useEffect(() => {
       if (isEditingColumnTitle && columnTitleRef.current) {
@@ -430,6 +434,7 @@ const Page = () => {
                       <li key={task.id} className="my-2.5">
                         <SortableTask
                           index={index}
+                          key={task.id}
                           taskTitle={task.title}
                           taskId={task.id}
                           taskCompleted={task.completed}
@@ -734,7 +739,7 @@ const Page = () => {
                     ref={provided.innerRef}
                     className="flex max-sm:flex-col max-sm:space-x-0 max-sm:space-y-4"
                   >
-                    {columns.map((column, index) => (
+                    {localColumns.map((column, index) => (
                       <DraggableColumn
                         index={index}
                         key={column.id}

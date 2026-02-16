@@ -428,99 +428,99 @@ export function useProject(projectId: string) {
     },
   });
 
-  const reorderTasksMutation = useMutation({
-    mutationFn: reorderTasks,
+  // const reorderTasksMutation = useMutation({
+  //   mutationFn: reorderTasks,
 
-    onMutate: async (taskUpdates) => {
-      await queryClient.cancelQueries({ queryKey: ["project", projectId] });
+  //   onMutate: async (taskUpdates) => {
+  //     await queryClient.cancelQueries({ queryKey: ["project", projectId] });
 
-      const previousData = queryClient.getQueryData<{
-        project: Project;
-        columnsWithTasks: ColumnWithTasks[];
-      }>(["project", projectId]);
+  //     const previousData = queryClient.getQueryData<{
+  //       project: Project;
+  //       columnsWithTasks: ColumnWithTasks[];
+  //     }>(["project", projectId]);
 
-      if (!previousData) return;
+  //     if (!previousData) return;
 
-      const oldColumns = structuredClone(previousData.columnsWithTasks);
+  //     const oldColumns = structuredClone(previousData.columnsWithTasks);
 
-      for (const update of taskUpdates) {
-        let movedTask: Task | undefined;
+  //     for (const update of taskUpdates) {
+  //       let movedTask: Task | undefined;
 
-        for (const col of oldColumns) {
-          const idx = col.tasks.findIndex((t) => t.id === update.id);
-          if (idx !== -1) {
-            movedTask = col.tasks.splice(idx, 1)[0];
-            break;
-          }
-        }
+  //       for (const col of oldColumns) {
+  //         const idx = col.tasks.findIndex((t) => t.id === update.id);
+  //         if (idx !== -1) {
+  //           movedTask = col.tasks.splice(idx, 1)[0];
+  //           break;
+  //         }
+  //       }
 
-        if (movedTask) {
-          const targetColumn = oldColumns.find(
-            (col) => col.id === update.columnId,
-          );
-          if (targetColumn) {
-            movedTask.sortOrder = update.sortOrder;
-            movedTask.columnId = update.columnId;
-            targetColumn.tasks.splice(update.sortOrder, 0, movedTask);
-          }
-        }
-      }
+  //       if (movedTask) {
+  //         const targetColumn = oldColumns.find(
+  //           (col) => col.id === update.columnId,
+  //         );
+  //         if (targetColumn) {
+  //           movedTask.sortOrder = update.sortOrder;
+  //           movedTask.columnId = update.columnId;
+  //           targetColumn.tasks.splice(update.sortOrder, 0, movedTask);
+  //         }
+  //       }
+  //     }
 
-      queryClient.setQueryData(["project", projectId], {
-        ...previousData,
-        columnsWithTasks: oldColumns,
-      });
+  //     queryClient.setQueryData(["project", projectId], {
+  //       ...previousData,
+  //       columnsWithTasks: oldColumns,
+  //     });
 
-      return { previousData };
-    },
+  //     return { previousData };
+  //   },
 
-    onError: (_err, variables, context) => {
-      if (context?.previousData) {
-        queryClient.setQueryData(["project", projectId], context.previousData);
-      }
-    },
-  });
+  //   onError: (_err, variables, context) => {
+  //     if (context?.previousData) {
+  //       queryClient.setQueryData(["project", projectId], context.previousData);
+  //     }
+  //   },
+  // });
 
-  const reorderColumnsMutation = useMutation({
-    mutationFn: ({
-      projectId,
-      columnUpdates,
-    }: {
-      projectId: string;
-      columnUpdates: { id: string; sortOrder: number }[];
-    }) => reorderColumns(projectId, columnUpdates),
+  // const reorderColumnsMutation = useMutation({
+  //   mutationFn: ({
+  //     projectId,
+  //     columnUpdates,
+  //   }: {
+  //     projectId: string;
+  //     columnUpdates: { id: string; sortOrder: number }[];
+  //   }) => reorderColumns(projectId, columnUpdates),
 
-    onMutate: async ({ projectId, columnUpdates }) => {
-      await queryClient.cancelQueries({ queryKey: ["project", projectId] });
+  //   onMutate: async ({ projectId, columnUpdates }) => {
+  //     await queryClient.cancelQueries({ queryKey: ["project", projectId] });
 
-      const previousData = queryClient.getQueryData(["project", projectId]);
-      if (!previousData) return { previousData: undefined };
+  //     const previousData = queryClient.getQueryData(["project", projectId]);
+  //     if (!previousData) return { previousData: undefined };
 
-      queryClient.setQueryData(["project", projectId], (old: any) => {
-        if (!old || !Array.isArray(old.columnsWithTasks)) return old;
+  //     queryClient.setQueryData(["project", projectId], (old: any) => {
+  //       if (!old || !Array.isArray(old.columnsWithTasks)) return old;
 
-        const updated = [...old.columnsWithTasks]
-          .map((col) => {
-            const u = columnUpdates.find((c) => c.id === col.id);
-            return u ? { ...col, sortOrder: u.sortOrder } : col;
-          })
-          .sort((a, b) => a.sortOrder - b.sortOrder);
+  //       const updated = [...old.columnsWithTasks]
+  //         .map((col) => {
+  //           const u = columnUpdates.find((c) => c.id === col.id);
+  //           return u ? { ...col, sortOrder: u.sortOrder } : col;
+  //         })
+  //         .sort((a, b) => a.sortOrder - b.sortOrder);
 
-        return { ...old, columnsWithTasks: updated };
-      });
+  //       return { ...old, columnsWithTasks: updated };
+  //     });
 
-      return { previousData };
-    },
+  //     return { previousData };
+  //   },
 
-    onError: (err, variables, context) => {
-      if (context?.previousData) {
-        queryClient.setQueryData(
-          ["project", variables.projectId],
-          context.previousData,
-        );
-      }
-    },
-  });
+  //   onError: (err, variables, context) => {
+  //     if (context?.previousData) {
+  //       queryClient.setQueryData(
+  //         ["project", variables.projectId],
+  //         context.previousData,
+  //       );
+  //     }
+  //   },
+  // });
 
   return {
     project,
@@ -534,7 +534,7 @@ export function useProject(projectId: string) {
     deleteColumn: deleteColumnMutation.mutate,
     moveTask: moveTaskMutation.mutate,
     setTaskComplete: setCompleteMutation.mutate,
-    reorderTask: reorderTasksMutation.mutate,
-    reorderColumns: reorderColumnsMutation.mutate,
+    // reorderTask: reorderTasksMutation.mutate,
+    // reorderColumns: reorderColumnsMutation.mutate,
   };
 }
