@@ -36,7 +36,7 @@ const Page = () => {
   const params = useParams<{ projectId: string }>();
   const {
     project,
-    columns: serverColumns,
+    columns,
     isLoading,
     error,
     updateProjectTitle,
@@ -165,7 +165,7 @@ const Page = () => {
 
     // Handle column reordering
     if (type === "column") {
-      const newColumns = Array.from(serverColumns);
+      const newColumns = Array.from(columns);
       const [movedColumn] = newColumns.splice(source.index, 1);
       newColumns.splice(destination.index, 0, movedColumn);
       setIsReorderingColumns(true);
@@ -199,7 +199,7 @@ const Page = () => {
 
       if (source.droppableId === destination.droppableId) {
         // Reordering within the same column
-        const column = serverColumns.find(
+        const column = columns.find(
           (col) => col.id === source.droppableId,
         );
         if (!column) {
@@ -209,7 +209,7 @@ const Page = () => {
         const newTasks = Array.from(column.tasks);
         const [movedTask] = newTasks.splice(source.index, 1);
         newTasks.splice(destination.index, 0, movedTask);
-        const newColumns = serverColumns.map((col) =>
+        const newColumns = columns.map((col) =>
           column && col.id === column.id ? { ...col, tasks: newTasks } : col,
         );
 
@@ -221,10 +221,10 @@ const Page = () => {
         }));
       } else {
         // Moving task between columns
-        const sourceColumn = serverColumns.find(
+        const sourceColumn = columns.find(
           (col) => col.id === source.droppableId,
         );
-        const destColumn = serverColumns.find(
+        const destColumn = columns.find(
           (col) => col.id === destination.droppableId,
         );
         if (!sourceColumn || !destColumn) return;
@@ -232,7 +232,7 @@ const Page = () => {
         const destTasks = Array.from(destColumn.tasks);
         const [movedTask] = sourceTasks.splice(source.index, 1);
         destTasks.splice(destination.index, 0, movedTask);
-        const newColumns = serverColumns.map((col) => {
+        const newColumns = columns.map((col) => {
           if (col.id === sourceColumn.id) {
             return { ...col, tasks: sourceTasks };
           }
@@ -523,8 +523,8 @@ const Page = () => {
             ref={provided.innerRef}
             className="group"
           >
-            <Card className="relative flex items-center gap-2 rounded-[4px] mx-1 dark:bg-zinc-800 bg-[#f5f9ff] hover:cursor-pointer shadow-xs border-none shadow-gray-400 dark:shadow-none">
-              <div
+            <Card className="relative flex items-center rounded-[4px] mx-1 dark:bg-zinc-800 bg-[#f5f9ff] hover:cursor-pointer shadow-xs border-none shadow-gray-400 dark:shadow-none">
+              {/* <div
                 id="sliding checkbox"
                 onPointerDown={(e) => {
                   e.stopPropagation();
@@ -542,18 +542,32 @@ const Page = () => {
                 {taskCompleted && (
                   <Check size={10} className="text-white dark:text-zinc-900" />
                 )}
-              </div>
+              </div> */}
               <p
                 {...provided.dragHandleProps}
                 onClick={() => {
                   taskModal.onOpen(taskId);
                 }}
-                className={`transition-all w-full p-2 duration-200 group-hover:translate-x-5 ${
-                  taskCompleted ? "translate-x-5" : ""
-                }`}
+                className="w-full p-2"
               >
                 {taskTitle}
               </p>
+              <div className="flex p-3 items-center justify-center">
+                <div
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setTaskComplete({
+                      taskId: taskId,
+                      completed: !taskCompleted,
+                    });
+                  }}
+                  className={`w-4 h-4 rounded-xs border-1 border-black/30 dark:border-white/30 flex items-center justify-center ${taskCompleted ? "bg-blue-500" : "bg-transparent"}`}
+                >
+                  {taskCompleted && (
+                    <Check size={15} className="text-white dark:text-black" />
+                  )}
+                </div>
+              </div>
             </Card>
           </div>
         )}
@@ -575,7 +589,7 @@ const Page = () => {
   function handleCreateNewColumn(formData: FormData) {
     const newColumnTitle = formData.get("title") as string;
     const projectId = project!.id;
-    const sortOrder = serverColumns.length;
+    const sortOrder = columns.length;
 
     try {
       createColumn({ projectId, title: newColumnTitle, sortOrder });
@@ -720,7 +734,7 @@ const Page = () => {
                     ref={provided.innerRef}
                     className="flex max-sm:flex-col max-sm:space-x-0 max-sm:space-y-4"
                   >
-                    {serverColumns.map((column, index) => (
+                    {columns.map((column, index) => (
                       <DraggableColumn
                         index={index}
                         key={column.id}
@@ -790,7 +804,7 @@ const Page = () => {
               {reorderingColumns && (
                 <p className="text-4xl font-[inter]">Reordering columns...</p>
               )}
-              {reorderingTasks && (
+              {isReorderingTasks && (
                 <p className="text-4xl font-[inter]">Reordering tasks...</p>
               )}
             </div>

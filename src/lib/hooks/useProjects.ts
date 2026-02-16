@@ -398,7 +398,6 @@ export function useProject(projectId: string) {
     }) => setComplete(taskId, completed),
 
     onMutate: async ({ taskId, completed }) => {
-      console.log("111111");
       await queryClient.cancelQueries({ queryKey: ["project", projectId] });
 
       const previousData = queryClient.getQueryData(["project", projectId]);
@@ -407,16 +406,16 @@ export function useProject(projectId: string) {
         if (!old) return old;
 
         return {
-    ...old,
-    columnsWithTasks: old.columnsWithTasks.map((col: ColumnWithTasks) => ({
-      ...col,
-      tasks: col.tasks.map((task) =>
-        task.id === taskId
-          ? { ...task, completed }
-          : task
-      ),
-    })),
-  };
+          ...old,
+          columnsWithTasks: old.columnsWithTasks.map(
+            (col: ColumnWithTasks) => ({
+              ...col,
+              tasks: col.tasks.map((task) =>
+                task.id === taskId ? { ...task, completed } : task,
+              ),
+            }),
+          ),
+        };
       });
 
       return { previousData };
@@ -427,10 +426,6 @@ export function useProject(projectId: string) {
         queryClient.setQueryData(["project", projectId], context.previousData);
       }
     },
-
-    onSuccess: () => {
-      console.log("22222");
-    }
   });
 
   const reorderTasksMutation = useMutation({
