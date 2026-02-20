@@ -22,6 +22,11 @@
 }
 
 @font-face {
+  font-family: monument;
+  src: url(../../public/Fonts/Monument/MonumentGrotesk_Regular-s.p.e26e8bd9.ttf);
+}
+
+@font-face {
   font-family: inter-bold;
   src: url(../../public/Fonts/Inter/Inter_28pt-Medium.ttf);
 }
