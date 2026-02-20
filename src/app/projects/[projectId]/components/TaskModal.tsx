@@ -10,7 +10,7 @@ import { updateTaskTitle } from "@/app/actions/services";
 import useTaskModal from "@/hooks/use-task-modal";
 
 const TaskModal = () => {
-  const id = useTaskModal((state) => state.id);
+  const taskData = useTaskModal((state) => state.taskData);
   const isOpen = useTaskModal((state) => state.isOpen);
   const onClose = useTaskModal((state) => state.onClose);
 
@@ -31,23 +31,24 @@ const TaskModal = () => {
 
     try {
       inputRef.current?.blur();
-      await updateTaskTitle(newTitle, taskId);
+      await updateTaskTitle(newTitle, taskData?.taskFromServer.id as string);
     } catch (error) {
       console.log(error);
     }
   };
 
   const { data, isLoading } = useQuery({
-    queryKey: ["tasks", id],
+    queryKey: ["tasks", taskData?.taskFromServer.id],
     queryFn: async () => {
-      const res = await fetch(`/api/tasks/${id}`);
+      const res = await fetch(`/api/tasks/${taskData?.taskFromServer.id}`);
 
       if (!res.ok) {
         throw new Error("Failed to fetch task");
       }
-
       return res.json();
     },
+    enabled: !!taskData?.taskFromServer.id,
+    initialData: taskData ? { ...taskData.taskFromServer, column: { title: taskData.localColumnTitle } } : undefined,
   });
 
   const [title, setTitle] = useState("");
@@ -57,34 +58,40 @@ const TaskModal = () => {
     if (data?.title) {
       setTitle(data.title);
     }
-  }, [data]);
+  }, [data?.id]);
 
   if (isLoading) {
     return (
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="w-[95vw] max-w-[425px] mx-auto font-[inter] top-[25%]">
+        <DialogContent className="w-[95vw] max-w-[425px] mx-auto font-[monument]nt] top-[25%]">
           <RippleWaveLoader className="h-5 w-1" />
         </DialogContent>
       </Dialog>
     );
   }
   async function handleSave() {
-    const trimmed = title.trim()
-    if(!trimmed){
-      setTitle(data.title)
+    const trimmed = title.trim();
+    if (!trimmed) {
+      setTitle(data.title);
       return;
     }
 
-    if(trimmed !== data.title){
-      try{
+    if (trimmed !== data.title) {
+      try {
         inputRef.current?.blur();
-        await updateTaskTitle(trimmed, id)
+        await updateTaskTitle(trimmed, taskData?.taskFromServer.id as string);
+
+        queryClient.setQueryData(["tasks", taskData?.taskFromServer.id], (old: any) => {
+          if (!old) return old;
+          return {
+            ...old,
+            title: trimmed,
+          };
+        });
+      } catch (error) {
+        console.error(error);
       }
-      catch(error){
-        console.error(error)
-      }
-    }
-    else{
+    } else {
       return;
     }
   }
@@ -95,9 +102,9 @@ const TaskModal = () => {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="w-[95vw] max-w-[425px] mx-auto font-[inter] top-[25%]">
+      <DialogContent className="w-[95vw] max-w-[425px] mx-auto font-[monument] top-[25%]">
         <button className="text-black/90 font-semibold dark:text-white/75 bg-black/20 dark:bg-zinc-800 dark:hover:bg-zinc-700 hover:cursor-pointer w-fit p-1 px-1.5 rounded-sm text-sm">
-          {data?.column.title}{" "}
+          {data?.column?.title}{" "}
           <MdKeyboardArrowDown className="inline-block text-xl" />
         </button>
         {/* <DialogTitle className="text-2xl">{data?.title}</DialogTitle> */}

@@ -23,7 +23,7 @@ const CreateProjectModal = () => {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="w-[95vw] max-w-[425px] mx-auto font-[inter] top-[35%]">
+      <DialogContent className="w-[95vw] max-w-[425px] mx-auto font-[monument] top-[35%]">
         <DialogHeader>
           <h1 className="text-xl font-[inter-bold] mb-4">Create New Project</h1>
         </DialogHeader>

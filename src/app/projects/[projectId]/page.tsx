@@ -49,13 +49,15 @@ const Page = () => {
     // createNewColumn,
   } = useProject(params.projectId);
 
-  const [localColumns, setLocalColumns] = useState<ColumnWithTasks[]>(columns || []);
+  const [localColumns, setLocalColumns] = useState<ColumnWithTasks[]>(
+    columns || [],
+  );
 
   useEffect(() => {
-    if(columns) {
+    if (columns) {
       setLocalColumns(columns);
     }
-  }, [columns])
+  }, [columns]);
 
   const [isEditingProjectTitle, setIsEditingProjectTitle] = useState(false);
   const [localProjectTitle, setLocalProjectTitle] = useState(project?.title);
@@ -154,7 +156,6 @@ const Page = () => {
   //   }
   // }
 
-
   const queryClient = useQueryClient();
   const onDragEnd = async (result: any) => {
     const { source, destination, type } = result;
@@ -173,7 +174,6 @@ const Page = () => {
 
     // Handle column reordering
     if (type === "column") {
-
       const newColumns = [...columns];
       const [movedColumn] = newColumns.splice(source.index, 1);
       newColumns.splice(destination.index, 0, movedColumn);
@@ -195,15 +195,14 @@ const Page = () => {
         return {
           ...old,
           columns: newColumns,
-        }
-      })
+        };
+      });
 
-     return;
+      return;
     }
 
     // Handle task reordering
     if (type === "task") {
-
       const newColumns = [...columns];
 
       const sourceColumnIndex = newColumns.findIndex(
@@ -217,7 +216,7 @@ const Page = () => {
       const destinationCol = newColumns[destinationColumnIndex];
 
       //same column reordering
-      if(sourceColumnIndex === destinationColumnIndex) {
+      if (sourceColumnIndex === destinationColumnIndex) {
         const newTasks = [...sourceCol.tasks];
         const [movedTask] = newTasks.splice(source.index, 1);
         newTasks.splice(destination.index, 0, movedTask);
@@ -227,7 +226,7 @@ const Page = () => {
       }
 
       //different column reordering
-      else{
+      else {
         const sourceTasks = [...sourceCol.tasks];
         const destTasks = [...destinationCol.tasks];
 
@@ -242,8 +241,7 @@ const Page = () => {
       setLocalColumns(newColumns);
 
       // db update
-      const updates: {id: string, columnId: string, sortOrder: number}[] = [];
-
+      const updates: { id: string; columnId: string; sortOrder: number }[] = [];
 
       newColumns.forEach((col: ColumnWithTasks) => {
         col.tasks.forEach((task: Task, index: number) => {
@@ -251,9 +249,9 @@ const Page = () => {
             id: task.id,
             columnId: col.id,
             sortOrder: index,
-          })
-        })
-      })
+          });
+        });
+      });
 
       await reorderTasks(updates);
 
@@ -263,8 +261,8 @@ const Page = () => {
         return {
           ...old,
           columns: newColumns,
-        }
-      })
+        };
+      });
       return;
     }
   };
@@ -364,7 +362,7 @@ const Page = () => {
             <Card
               {...provided.draggableProps}
               ref={provided.innerRef}
-              className="w-full sm:flex-shrink-0 sm:w-75 h-fit p-2 rounded-[6px] bg-zinc-100 dark:bg-black/40 shadow-xs shadow-gray-500 dark:shadow-none"
+              className="w-full sm:flex-shrink-0 sm:w-75 h-fit p-2 rounded-[6px] bg-zinc-100 dark:bg-[#09090B] shadow-xs shadow-gray-500 dark:shadow-none"
             >
               <div
                 {...provided.dragHandleProps}
@@ -435,9 +433,11 @@ const Page = () => {
                         <SortableTask
                           index={index}
                           key={task.id}
+                          task={task}
                           taskTitle={task.title}
                           taskId={task.id}
                           taskCompleted={task.completed}
+                          taskColumnTitle={column.title}
                         ></SortableTask>
                       </li>
                     ))}
@@ -463,7 +463,7 @@ const Page = () => {
                     id=""
                     value={taskTitle}
                     onChange={(e) => setTaskTitle(e.target.value)}
-                    className="resize-none w-full px-2 py-2 rounded-[4px] bg-zinc-50 dark:bg-zinc-800 border not-hover:border-blue-500 outline-none font-[inter] "
+                    className="resize-none w-full px-2 py-2 rounded-[4px] bg-zinc-50 dark:bg-zinc-800 border not-hover:border-blue-500 outline-none font-[monument]nt] "
                     autoFocus
                   ></textarea>
                   <div className="flex space-x-2 items-center">
@@ -498,14 +498,18 @@ const Page = () => {
   }
   function SortableTask({
     index,
+    task,
     taskTitle,
     taskId,
     taskCompleted,
+    taskColumnTitle,
   }: {
     index: number;
+    task: Task;
     taskTitle: string;
     taskId: string;
     taskCompleted: boolean;
+    taskColumnTitle: string;
   }) {
     const [addingTask, setAddingTask] = useState(false);
     const timeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -528,7 +532,7 @@ const Page = () => {
             ref={provided.innerRef}
             className="group"
           >
-            <Card className="relative flex items-center rounded-[4px] mx-1 dark:bg-zinc-800 bg-[#f5f9ff] hover:cursor-pointer shadow-xs border-none shadow-gray-400 dark:shadow-none">
+            <Card className="relative flex items-center rounded-[4px] mx-1 dark:bg-[#131316] bg-[#f5f9ff] hover:cursor-pointer shadow-xs border-none shadow-gray-400 dark:shadow-none">
               {/* <div
                 id="sliding checkbox"
                 onPointerDown={(e) => {
@@ -551,19 +555,22 @@ const Page = () => {
               <p
                 {...provided.dragHandleProps}
                 onClick={() => {
-                  taskModal.onOpen(taskId);
+                  taskModal.onOpen({
+                    task: task,
+                    localColumnTitle: taskColumnTitle,
+                  });
                 }}
                 className="w-full p-2"
               >
-                {taskTitle}
+                {task.title}
               </p>
               <div className="flex p-3 items-center justify-center">
                 <div
                   onClick={(e) => {
                     e.stopPropagation();
                     setTaskComplete({
-                      taskId: taskId,
-                      completed: !taskCompleted,
+                      taskId: task.id,
+                      completed: !task.completed,
                     });
                   }}
                   className={`w-4 h-4 rounded-xs border-1 border-black/30 dark:border-white/30 flex items-center justify-center ${taskCompleted ? "bg-blue-500" : "bg-transparent"}`}
@@ -605,7 +612,7 @@ const Page = () => {
   }
 
   return (
-    <div className="h-screen max-w-[100vw] font-[inter] flex flex-col items-center">
+    <div className="h-screen max-w-[100vw] font-[monument] flex flex-col items-center">
       <Header visible={true} className="mb-5" />
       {/* Everything after header */}
       <motion.section
@@ -622,7 +629,7 @@ const Page = () => {
             onClick={() => router.push("/projects")}
           >
             <MdKeyboardArrowLeft size={15} />
-            Back to Projects
+            Back
           </Button>
           <div className="flex items-center justify-between h-15">
             <span
@@ -646,7 +653,7 @@ const Page = () => {
                   setIsEditingProjectTitle(false);
                 }
               }}
-              className="text-2xl font-bold tracking-wide mx-5 p-1 px-2 max-w-[90%] truncate whitespace-nowrap rounded-[4px] focus:outline-1 focus:outline-blue-500 hover:bg-black/10 dark:hover:bg-white/10 hover:cursor-pointer focus:cursor-text"
+              className="text-2xl font-[inter-bold] tracking-wide mx-5 p-1 px-2 max-w-[90%] truncate whitespace-nowrap rounded-[4px] focus:outline-1 focus:outline-blue-500 hover:bg-black/10 dark:hover:bg-white/10 hover:cursor-pointer focus:cursor-text"
             >
               {localProjectTitle}
             </span>
@@ -667,7 +674,7 @@ const Page = () => {
 
         {/* Filter dialog */}
         <Dialog open={isFilterOpen} onOpenChange={setIsFilterOpen}>
-          <DialogContent className="w-[95vw] max-w-[425px] mx-auto font-[inter]">
+          <DialogContent className="w-[95vw] max-w-[425px] mx-auto font-[monument]nt]">
             <DialogHeader>
               <DialogTitle className="">Filter Tasks</DialogTitle>
               <p className="text-xs sm:text-sm text-zinc-600">
@@ -775,7 +782,7 @@ const Page = () => {
                       name="title"
                       id=""
                       placeholder="Enter column title"
-                      className="resize-none text-md w-full px-3 py-2 rounded-[4px] bg-zinc-50 dark:bg-zinc-800 border not-hover:border-blue-500 outline-none font-[inter] "
+                      className="resize-none text-md w-full px-3 py-2 rounded-[4px] bg-zinc-50 dark:bg-zinc-800 border not-hover:border-blue-500 outline-none font-[monument] "
                       autoFocus
                     ></input>
                     <div className="flex space-x-2 items-center">
@@ -807,10 +814,12 @@ const Page = () => {
             </DragDropContext>
             <div>
               {reorderingColumns && (
-                <p className="text-4xl font-[inter]">Reordering columns...</p>
+                <p className="text-4xl font-[monument]">
+                  Reordering columns...
+                </p>
               )}
               {isReorderingTasks && (
-                <p className="text-4xl font-[inter]">Reordering tasks...</p>
+                <p className="text-4xl font-[monument]">Reordering tasks...</p>
               )}
             </div>
           </section>

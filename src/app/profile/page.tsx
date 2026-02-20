@@ -60,7 +60,7 @@ const page = () => {
       <header className="w-full text-white mb-5 absolute">
         <Header visible={true} />
       </header>
-      <main className="min-h-[100vh] rounded-md w-full md:w-[80%] lg:w-[70%] xl:w-[60%] flex flex-col justify-start font-[inter] p-5 pt-20">
+      <main className="min-h-[100vh] rounded-md w-full md:w-[80%] lg:w-[70%] xl:w-[60%] flex flex-col justify-start font-[monument] p-5 pt-20">
         <header className="sm:text-5xl text-3xl font-[clashreg] p-1 mb-5 border-b-1 border-dashed">
           Profile
         </header>

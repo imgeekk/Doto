@@ -36,7 +36,7 @@ const Page = () => {
             </span>
             .
           </h1>
-          <h1 id="sub-title" className="sm:text-md text-white/70 font-[inter] text-xl text-center mb-5">
+          <h1 id="sub-title" className="sm:text-md text-white/70 font-[monument] text-xl text-center mb-5">
             A modern <span className="text-white">project management tool</span> built for focused teams. <span className="text-white">Plan</span>{" "}
             tasks, <span className="text-white">organize</span> workflows, and{" "}
             <span className="text-white">track</span> progress without the
@@ -46,7 +46,7 @@ const Page = () => {
             <Link href="/signup">
               <GradientButton
                 variant="variant"
-                className="font-[inter] text-xl"
+                className="font-[monument] text-xl"
               >
                 Get Started
               </GradientButton>

@@ -81,7 +81,7 @@ export const SignInPage: React.FC<SignInPageProps> = ({
  }, [errorFromPage])
 
   return (
-    <div className="h-[100dvh] flex flex-col font-[inter] tracking-wide w-[100dvw]">
+    <div className="h-[100dvh] flex flex-col font-[monument] tracking-wide w-[100dvw]">
       <header className="w-full">
         <Header visible={true} />
       </header>

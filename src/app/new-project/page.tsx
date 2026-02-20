@@ -5,7 +5,7 @@ import { FaArrowRight } from "react-icons/fa";
 
 const page = () => {
   return (
-    <div className="min-h-screen font-[inter] flex flex-col items-center">
+    <div className="min-h-screen font-[monument] flex flex-col items-center">
       <Header visible={true} />
       <main className="p-5 w-full md:w-[80%] lg:w-[70%] xl:w-[60%] mt-5 text-md sm:text-lg">
         <header className="mb-5">

@@ -58,7 +58,7 @@ const ColumnForm = () => {
               name="title"
               id=""
               placeholder="Enter column title"
-              className="resize-none text-md w-full px-3 py-2 rounded-sm bg-zinc-50 dark:bg-zinc-800 border not-hover:border-blue-500 outline-none font-[inter] "
+              className="resize-none text-md w-full px-3 py-2 rounded-sm bg-zinc-50 dark:bg-zinc-800 border not-hover:border-blue-500 outline-none font-[monument]nt] "
               autoFocus
             ></input>
             <div className="flex space-x-2 items-center">

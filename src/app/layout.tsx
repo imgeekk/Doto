@@ -20,7 +20,7 @@ export default function RootLayout({
       <head />
       <body
         suppressHydrationWarning={true}
-        className="bg-[#eaedf2] dark:bg-black/10"
+        className="bg-[#eaedf2] dark:bg-[#09090B]"
       >
           <AppProvider>
             {children}

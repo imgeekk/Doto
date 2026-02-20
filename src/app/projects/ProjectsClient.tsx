@@ -25,7 +25,7 @@ const ProjectClient = ({ user }: any) => {
   const router = useRouter();
 
   return (
-    <div className="h-screen font-[inter] flex flex-col dark:text-white/90">
+    <div className="h-screen font-[monument] flex flex-col dark:text-white/90">
       <Header visible={true} />
       <motion.main
         initial={{ opacity: 0 }}
@@ -40,7 +40,7 @@ const ProjectClient = ({ user }: any) => {
           <p></p>
         </aside>
         <section className="flex-1 flex flex-col p-3">
-            <header className="font-[intermed] text-3xl mb-5">
+            <header className="font-[monument] font-bold text-3xl mb-5">
               Your Workspace
             </header>
             <div className="relative flex-1 min-h-0 ">
