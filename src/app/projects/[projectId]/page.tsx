@@ -174,7 +174,7 @@ const Page = () => {
 
     // Handle column reordering
     if (type === "column") {
-      const newColumns = [...columns];
+      const newColumns = [...localColumns];
       const [movedColumn] = newColumns.splice(source.index, 1);
       newColumns.splice(destination.index, 0, movedColumn);
 
@@ -203,7 +203,7 @@ const Page = () => {
 
     // Handle task reordering
     if (type === "task") {
-      const newColumns = [...columns];
+      const newColumns = [...localColumns];
 
       const sourceColumnIndex = newColumns.findIndex(
         (col) => col.id === source.droppableId,
@@ -358,11 +358,10 @@ const Page = () => {
     return (
       <Draggable draggableId={String(column.id)} index={index}>
         {(provided) => (
-          <div className="px-2">
             <Card
               {...provided.draggableProps}
               ref={provided.innerRef}
-              className="w-full sm:flex-shrink-0 sm:w-75 h-fit p-2 rounded-[6px] bg-zinc-100 dark:bg-[#09090B] shadow-xs shadow-gray-500 dark:shadow-none"
+              className="w-full mx-2 sm:flex-shrink-0 sm:w-75 h-fit p-2 rounded-[6px] bg-zinc-100 dark:bg-[#09090B] shadow-xs shadow-gray-500 dark:shadow-none"
             >
               <div
                 {...provided.dragHandleProps}
@@ -425,11 +424,9 @@ const Page = () => {
                   <ol
                     ref={provided.innerRef}
                     {...provided.droppableProps}
-                    key={column.id}
                     className="py-[1px]"
                   >
                     {column.tasks.map((task, index) => (
-                      <li key={task.id} className="my-2.5">
                         <SortableTask
                           index={index}
                           key={task.id}
@@ -439,7 +436,6 @@ const Page = () => {
                           taskCompleted={task.completed}
                           taskColumnTitle={column.title}
                         ></SortableTask>
-                      </li>
                     ))}
                     {provided.placeholder}
                   </ol>
@@ -487,7 +483,6 @@ const Page = () => {
                 </div>
               )}
             </Card>
-          </div>
         )}
       </Draggable>
     );
@@ -530,7 +525,7 @@ const Page = () => {
           <div
             {...provided.draggableProps}
             ref={provided.innerRef}
-            className="group"
+            className="group mb-2.5"
           >
             <Card className="relative flex items-center rounded-[4px] mx-1 dark:bg-[#131316] bg-[#f5f9ff] hover:cursor-pointer shadow-xs border-none shadow-gray-400 dark:shadow-none">
               {/* <div
