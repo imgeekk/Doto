@@ -46,6 +46,11 @@
   src: url(../../public/Fonts/Helvetica/Helvetica-Bold.ttf);
 }
 
+#scrollable-content{
+  scrollbar-width: thin;
+  scroll-behavior: smooth;
+}
+
 /* projects grid */
 @media (max-width: 400px) {
   .grid-xs-1 {

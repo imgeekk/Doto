@@ -181,14 +181,7 @@ const Page = () => {
       //local update
       setLocalColumns(newColumns);
 
-      //db update
-      const columnUpdates = newColumns.map((col, index) => ({
-        id: col.id,
-        sortOrder: index,
-      }));
-
-      await reorderColumns(project!.id, columnUpdates);
-
+      //cache update
       queryClient.setQueryData(["projects", project!.id], (old: any) => {
         if (!old) return old;
 
@@ -197,6 +190,14 @@ const Page = () => {
           columns: newColumns,
         };
       });
+
+      //db update
+      const columnUpdates = newColumns.map((col, index) => ({
+        id: col.id,
+        sortOrder: index,
+      }));
+
+      await reorderColumns(project!.id, columnUpdates);
 
       return;
     }
@@ -240,6 +241,16 @@ const Page = () => {
       // local update
       setLocalColumns(newColumns);
 
+      // cache update
+      queryClient.setQueryData(["projects", project!.id], (old: any) => {
+        if (!old) return old;
+
+        return {
+          ...old,
+          columns: newColumns,
+        };
+      });
+
       // db update
       const updates: { id: string; columnId: string; sortOrder: number }[] = [];
 
@@ -255,14 +266,6 @@ const Page = () => {
 
       await reorderTasks(updates);
 
-      queryClient.setQueryData(["projects", project!.id], (old: any) => {
-        if (!old) return old;
-
-        return {
-          ...old,
-          columns: newColumns,
-        };
-      });
       return;
     }
   };
@@ -358,131 +361,131 @@ const Page = () => {
     return (
       <Draggable draggableId={String(column.id)} index={index}>
         {(provided) => (
-            <Card
-              {...provided.draggableProps}
-              ref={provided.innerRef}
-              className="w-full mx-2 sm:flex-shrink-0 sm:w-75 h-fit p-2 rounded-[6px] bg-zinc-100 dark:bg-[#09090B] shadow-xs shadow-gray-500 dark:shadow-none"
+          <Card
+            {...provided.draggableProps}
+            ref={provided.innerRef}
+            className="w-full mx-2 sm:flex-shrink-0 sm:w-75 h-fit p-2 rounded-[6px] bg-zinc-100 dark:bg-[#09090B] shadow-xs shadow-gray-500 dark:shadow-none"
+          >
+            <div
+              {...provided.dragHandleProps}
+              className="flex items-center justify-between mb-2 !cursor-pointer"
             >
-              <div
-                {...provided.dragHandleProps}
-                className="flex items-center justify-between mb-2"
-              >
-                <div className="p-1">
-                  <span
-                    ref={columnTitleRef}
-                    defaultValue={localProjectTitle || ""}
-                    contentEditable={isEditingColumnTitle}
-                    suppressContentEditableWarning
-                    onClick={(e) => {
-                      if (!isEditingColumnTitle) setIsEditingColumnTitle(true);
-                    }}
-                    onBlur={(e) => {
+              <div className="p-1">
+                <span
+                  ref={columnTitleRef}
+                  defaultValue={localProjectTitle || ""}
+                  contentEditable={isEditingColumnTitle}
+                  suppressContentEditableWarning
+                  onClick={(e) => {
+                    if (!isEditingColumnTitle) setIsEditingColumnTitle(true);
+                  }}
+                  onBlur={(e) => {
+                    setIsEditingColumnTitle(false);
+                    const newTitle = e.currentTarget.textContent || "";
+                    handleSave(newTitle);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      e.currentTarget.blur();
+                    }
+                    if (e.key === "Escape") {
+                      e.currentTarget.textContent = column.title;
                       setIsEditingColumnTitle(false);
-                      const newTitle = e.currentTarget.textContent || "";
-                      handleSave(newTitle);
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault();
-                        e.currentTarget.blur();
-                      }
-                      if (e.key === "Escape") {
-                        e.currentTarget.textContent = column.title;
-                        setIsEditingColumnTitle(false);
-                      }
-                    }}
-                    className={`text-lg w-full block font-[inter-bold] px-2 py-1 rounded-[4px] focus:outline-1 focus:outline-blue-500 hover:bg-black/10 dark:hover:bg-white/10 leading-snug break-words ${
-                      !isEditingColumnTitle
-                        ? "hover:cursor-pointer"
-                        : "focus:cursor-text bg-white dark:bg-zinc-800"
-                    }`}
-                  >
-                    {localColumnTitle}
-                  </span>
-                </div>
-
-                <Dropdown>
-                  <DropdownTrigger className="cursor-pointer">
-                    <Button variant="ghost">
-                      <MoreHorizontal size={15} />
-                    </Button>
-                  </DropdownTrigger>
-                  <DropdownContent align="end" className="w-26">
-                    <DropdownItem
-                      className="gap-2"
-                      destructive
-                      onClick={() => handleDeleteColumn(column.id)}
-                    >
-                      <MdDeleteOutline className="h-5 w-5" />
-                      <p className="">Delete</p>
-                    </DropdownItem>
-                  </DropdownContent>
-                </Dropdown>
+                    }
+                  }}
+                  className={`text-lg w-full block font-[inter-bold] px-2 py-1 rounded-[4px] focus:outline-1 focus:outline-blue-500 hover:bg-black/10 dark:hover:bg-white/10 leading-snug break-words ${
+                    !isEditingColumnTitle
+                      ? "hover:cursor-pointer"
+                      : "focus:cursor-text bg-white dark:bg-zinc-800"
+                  }`}
+                >
+                  {localColumnTitle}
+                </span>
               </div>
-              <Droppable droppableId={String(column.id)} type="task">
-                {(provided) => (
-                  <ol
-                    ref={provided.innerRef}
-                    {...provided.droppableProps}
-                    className="py-[1px]"
+
+              <Dropdown>
+                <DropdownTrigger className="cursor-pointer">
+                  <Button variant="ghost">
+                    <MoreHorizontal size={15} />
+                  </Button>
+                </DropdownTrigger>
+                <DropdownContent align="end" className="w-26">
+                  <DropdownItem
+                    className="gap-2"
+                    destructive
+                    onClick={() => handleDeleteColumn(column.id)}
                   >
-                    {column.tasks.map((task, index) => (
-                        <SortableTask
-                          index={index}
-                          key={task.id}
-                          task={task}
-                          taskTitle={task.title}
-                          taskId={task.id}
-                          taskCompleted={task.completed}
-                          taskColumnTitle={column.title}
-                        ></SortableTask>
-                    ))}
-                    {provided.placeholder}
-                  </ol>
-                )}
-              </Droppable>
-              {!isAddingTask ? (
-                <div className="p-1">
+                    <MdDeleteOutline className="h-5 w-5" />
+                    <p className="">Delete</p>
+                  </DropdownItem>
+                </DropdownContent>
+              </Dropdown>
+            </div>
+            <Droppable droppableId={String(column.id)} type="task">
+              {(provided) => (
+                <ol
+                  ref={provided.innerRef}
+                  {...provided.droppableProps}
+                  className="py-[1px]"
+                >
+                  {column.tasks.map((task, index) => (
+                    <SortableTask
+                      index={index}
+                      key={task.id}
+                      task={task}
+                      taskTitle={task.title}
+                      taskId={task.id}
+                      taskCompleted={task.completed}
+                      taskColumnTitle={column.title}
+                    ></SortableTask>
+                  ))}
+                  {provided.placeholder}
+                </ol>
+              )}
+            </Droppable>
+            {!isAddingTask ? (
+              <div className="p-1">
+                <Button
+                  variant="ghost"
+                  className="w-full rounded-[4px]"
+                  onClick={() => setIsAddingTask(true)}
+                >
+                  <Plus size={15} />
+                  Add Task
+                </Button>
+              </div>
+            ) : (
+              <div className="p-1">
+                <textarea
+                  name=""
+                  id=""
+                  value={taskTitle}
+                  onChange={(e) => setTaskTitle(e.target.value)}
+                  className="resize-none w-full px-2 py-2 rounded-[4px] bg-zinc-50 dark:bg-zinc-800 border not-hover:border-blue-500 outline-none font-[monument]nt] "
+                  autoFocus
+                ></textarea>
+                <div className="flex space-x-2 items-center">
                   <Button
-                    variant="ghost"
-                    className="w-full rounded-[4px]"
-                    onClick={() => setIsAddingTask(true)}
+                    className="bg-blue-400 rounded-[4px] hover:bg-blue-300 text-zinc-900"
+                    onClick={handleCreateTask}
                   >
-                    <Plus size={15} />
                     Add Task
                   </Button>
+                  <Button
+                    variant="ghost"
+                    className="h-full p-2 rounded-[4px]"
+                    onClick={() => {
+                      setIsAddingTask(false);
+                      setTaskTitle("");
+                    }}
+                  >
+                    <X size={15} />
+                  </Button>
                 </div>
-              ) : (
-                <div className="p-1">
-                  <textarea
-                    name=""
-                    id=""
-                    value={taskTitle}
-                    onChange={(e) => setTaskTitle(e.target.value)}
-                    className="resize-none w-full px-2 py-2 rounded-[4px] bg-zinc-50 dark:bg-zinc-800 border not-hover:border-blue-500 outline-none font-[monument]nt] "
-                    autoFocus
-                  ></textarea>
-                  <div className="flex space-x-2 items-center">
-                    <Button
-                      className="bg-blue-400 rounded-[4px] hover:bg-blue-300 text-zinc-900"
-                      onClick={handleCreateTask}
-                    >
-                      Add Task
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      className="h-full p-2 rounded-[4px]"
-                      onClick={() => {
-                        setIsAddingTask(false);
-                        setTaskTitle("");
-                      }}
-                    >
-                      <X size={15} />
-                    </Button>
-                  </div>
-                </div>
-              )}
-            </Card>
+              </div>
+            )}
+          </Card>
         )}
       </Draggable>
     );
@@ -527,7 +530,7 @@ const Page = () => {
             ref={provided.innerRef}
             className="group mb-2.5"
           >
-            <Card className="relative flex items-center rounded-[4px] mx-1 dark:bg-[#131316] bg-[#f5f9ff] hover:cursor-pointer shadow-xs border-none shadow-gray-400 dark:shadow-none">
+            <Card className="flex rounded-[4px] mx-1 dark:bg-[#131316] bg-[#f5f9ff] hover:cursor-pointer shadow-xs border-none shadow-gray-400 dark:shadow-none">
               {/* <div
                 id="sliding checkbox"
                 onPointerDown={(e) => {
@@ -547,19 +550,17 @@ const Page = () => {
                   <Check size={10} className="text-white dark:text-zinc-900" />
                 )}
               </div> */}
-              <p
+              <span
+              id="task-title"
                 {...provided.dragHandleProps}
                 onClick={() => {
-                  taskModal.onOpen({
-                    task: task,
-                    localColumnTitle: taskColumnTitle,
-                  });
+                  taskModal.onOpen(taskId);
                 }}
-                className="w-full p-2"
+                className="flex-1 min-w-0 leading-snug break-words p-2 !cursor-pointer"
               >
                 {task.title}
-              </p>
-              <div className="flex p-3 items-center justify-center">
+              </span>
+              <div className="flex p-3 items-start justify-center">
                 <div
                   onClick={(e) => {
                     e.stopPropagation();
@@ -568,7 +569,7 @@ const Page = () => {
                       completed: !task.completed,
                     });
                   }}
-                  className={`w-4 h-4 rounded-xs border-1 border-black/30 dark:border-white/30 flex items-center justify-center ${taskCompleted ? "bg-blue-500" : "bg-transparent"}`}
+                  className={`w-4 h-4 rounded-xs border-1 border-black/30 dark:border-white/30 flex items-center justify-center ${taskCompleted ? "bg-blue-500 border-none" : "bg-transparent"}`}
                 >
                   {taskCompleted && (
                     <Check size={15} className="text-white dark:text-black" />

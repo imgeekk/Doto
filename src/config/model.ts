@@ -34,3 +34,7 @@ export interface Task{
     createdAt: Date;
     // updatedAt: string;
 }
+
+export type TaskWithColumn = Task & {
+    column: Column
+}

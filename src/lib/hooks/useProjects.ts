@@ -7,6 +7,7 @@ import {
   getProjects,
   getProjectsWithColumns,
   updateProject,
+  updateTaskTitle,
   createTask,
   updateColumn,
   createColumn,
@@ -18,6 +19,7 @@ import {
   deleteColumn,
 } from "@/app/actions/services";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { task } from "better-auth/react";
 
 export function useProjects() {
   const queryClient = useQueryClient();
@@ -209,6 +211,40 @@ export function useProject(projectId: string) {
         return {
           columnsWithTasks: old.columnsWithTasks.map((col: ColumnWithTasks) =>
             col.id === columnId ? { ...col, title: newTitle } : col,
+          ),
+        };
+      });
+      return { previousData };
+    },
+
+    onError: (_err, _vars, context) => {
+      queryClient.setQueryData(["project", projectId], context?.previousData);
+    },
+  });
+
+  // update task title
+
+  const updateTaskTitleMutation = useMutation({
+    mutationFn: ({ newTitle, taskId }: { newTitle: string; taskId: string }) =>
+      updateTaskTitle(newTitle, taskId),
+
+    onMutate: async ({ newTitle, taskId }) => {
+      await queryClient.cancelQueries({ queryKey: ["project", projectId] });
+
+      const previousData = queryClient.getQueryData(["project", projectId]);
+
+      queryClient.setQueryData(["project", projectId], (old: any) => {
+        if (!old) return old;
+
+        return {
+          ...old,
+          columnsWithTasks: old.columnsWithTasks.map(
+            (col: ColumnWithTasks) => ({
+              ...col,
+              tasks: col.tasks.map((t) =>
+                t.id === taskId ? { ...t, title: newTitle } : t,
+              ),
+            }),
           ),
         };
       });
@@ -418,6 +454,15 @@ export function useProject(projectId: string) {
         };
       });
 
+      queryClient.setQueryData(["task", taskId], (old: any) => {
+        if (!old) return old;
+
+        return {
+          ...old,
+          completed,
+        };
+      });
+
       return { previousData };
     },
 
@@ -529,6 +574,7 @@ export function useProject(projectId: string) {
     error,
     updateProjectTitle: updateProjectTitle.mutate,
     updateColumnTitle: updateColumnTitle.mutate,
+    updateTaskTitle: updateTaskTitleMutation.mutate,
     createTask: createTaskMutation.mutate,
     createColumn: createColumnMutation.mutate,
     deleteColumn: deleteColumnMutation.mutate,

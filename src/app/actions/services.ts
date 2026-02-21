@@ -1,7 +1,7 @@
 "use server";
 
 import prisma from "@/app/lib/prisma";
-import { Column, ColumnWithTasks, Project, Task } from "../../config/model";
+import { Column, ColumnWithTasks, Project, Task, TaskWithColumn } from "../../config/model";
 
 // ---Project Services---
 
@@ -226,6 +226,22 @@ async function getTasksByProject(projectId: string): Promise<Task[]> {
   }
 }
 
+async function getTask(taskId: string): Promise<TaskWithColumn | null> {
+  try {
+    const data = await prisma.tasks.findUnique({
+      where: {
+        id: taskId,
+      },
+      include: {
+        column: true
+      }
+    });
+    return data;
+  } catch (err) {
+    throw err;
+  }
+}
+
 async function createTask(task: {
   title: string;
   columnId: string;
@@ -289,6 +305,7 @@ async function reorderTasks(
   taskUpdates: { id: string; columnId: string; sortOrder: number }[],
 ) {
   try {
+    console.log("reordering tasks");
     // Create an array of update promises for the transaction
     const transaction = taskUpdates.map((update) =>
       prisma.tasks.update({
@@ -372,6 +389,7 @@ export {
   deleteProject,
   getProjects,
   getProjectsWithColumns,
+  getTask,
   updateProject,
   createTask,
   updateColumn,
