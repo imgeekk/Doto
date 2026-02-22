@@ -21,7 +21,7 @@ const TaskModal = () => {
   const queryClient = useQueryClient();
   const params = useParams<{ projectId: string }>();
 
-  const { updateTaskTitle, setTaskComplete } = useProject(params.projectId);
+  const { updateTask, setTaskComplete } = useProject(params.projectId);
 
   const { data: task, isLoading } = useQuery({
     queryKey: ["task", taskId],
@@ -38,16 +38,28 @@ const TaskModal = () => {
     if (task) {
       setTitle(task.title);
     }
-  }, [task]);
+  }, [task?.title]);
+
+  useEffect(() => {
+    if (task) {
+      setDescription(task.description || "");
+    }
+  }, [task?.description]);
 
   const titleInputRef = useRef<ComponentRef<"span">>(null);
-  const descriptionRef = useRef<ComponentRef<"span">>(null);
+  const descInputRef = useRef<ComponentRef<"span">>(null);
 
   useEffect(() => {
     if (isEditingTitle && titleInputRef.current) {
       titleInputRef.current.focus();
     }
   }, [isEditingTitle]);
+
+  useEffect(() => {
+    if (isEditingDesc && descInputRef.current) {
+      descInputRef.current.focus();
+    }
+  }, [isEditingDesc]);
 
   const onSubmit = async (formData: FormData) => {
     const newTitle = formData.get("title") as string;
@@ -57,7 +69,7 @@ const TaskModal = () => {
 
     try {
       titleInputRef.current?.blur();
-      updateTaskTitle({ newTitle, taskId: taskId! });
+      updateTask({ taskId: taskId!, data: { title: newTitle } });
     } catch (error) {
       console.log(error);
     }
@@ -66,7 +78,7 @@ const TaskModal = () => {
   if (isLoading || !task) {
     return (
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="w-[95vw] max-w-[425px] mx-auto font-[monument] top-[10vh] !translate-y-0">
+        <DialogContent className="w-[95vw] max-w-[425px] mx-auto font-[inter] top-[10vh] !translate-y-0">
           <RippleWaveLoader className="h-5 w-1" />
         </DialogContent>
       </Dialog>
@@ -75,9 +87,11 @@ const TaskModal = () => {
 
   async function handleSave(newTitle: string) {
     const trimmed = newTitle?.trim();
+
     if (!trimmed) {
-      if (titleInputRef.current) {
-        titleInputRef.current.textContent = task!.title;
+      setTitle(task!.title);
+      if(titleInputRef.current){
+        titleInputRef.current.textContent = title
       }
       return;
     }
@@ -85,7 +99,7 @@ const TaskModal = () => {
     if (trimmed !== task?.title) {
       try {
         titleInputRef.current?.blur();
-        updateTaskTitle({ newTitle: trimmed, taskId: taskId! });
+        updateTask({ taskId: taskId!, data: { title: trimmed } });
       } catch (error) {
         console.error(error);
       }
@@ -95,21 +109,22 @@ const TaskModal = () => {
   }
 
   function handleCancel() {
-    if (titleInputRef.current) {
-      titleInputRef.current.textContent = task!.title;
-    }
+    setTitle(task!.title)
+    setIsEditingTitle(false);
   }
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="w-[95vw] max-w-[425px] max-h-[85vh] mx-auto font-[monument] top-[10vh] !translate-y-0 flex flex-col overflow-hidden">
-        <button className="text-black/90 font-semibold dark:text-white/75 bg-black/20 dark:bg-zinc-800 dark:hover:bg-zinc-700 hover:cursor-pointer w-fit p-1 px-1.5 rounded-sm text-sm">
+      
+      <DialogContent className="w-[95vw] max-w-[425px] max-h-[85vh] mx-auto font-[inter] top-[10vh] !translate-y-0 flex flex-col overflow-hidden">
+        <button className="text-black/90 font-[inter-bold] dark:text-white/75 bg-black/20 dark:bg-zinc-800 dark:hover:bg-zinc-700 hover:cursor-pointer w-fit p-1 px-1.5 rounded-sm text-sm">
           {task?.column.title}{" "}
           <MdKeyboardArrowDown className="inline-block text-xl" />
         </button>
+        <hr />
         <div id="scrollable-content" className="flex-1 overflow-y-auto p-1">
-          <header className="relative flex mb-5">
-            <div id="checkbox-container" className="py-3.5">
+          <header className="relative flex mb-7">
+            <div id="checkbox-container" className="w-10 flex items-start justify-center py-3">
               <Tooltip>
                 <TooltipTrigger className="">
                   <div
@@ -121,7 +136,7 @@ const TaskModal = () => {
                         completed: !task.completed,
                       });
                     }}
-                    className={`w-4 h-4 mx-2 rounded-xs border-1 border-black/30 dark:border-white/40 flex items-center justify-center cursor-pointer ${task?.completed ? "bg-blue-500 border-none" : "bg-transparent"}`}
+                    className={`w-4 h-4 mx-2 rounded-xs border-1 border-black/90 dark:border-white/40 flex items-center justify-center cursor-pointer ${task?.completed ? "bg-blue-500 border-none" : "bg-transparent"}`}
                   >
                     {task?.completed && (
                       <Check size={15} className="text-white dark:text-black" />
@@ -129,15 +144,14 @@ const TaskModal = () => {
                   </div>
                 </TooltipTrigger>
                 <TooltipContent className="p-1 rounded-[4px]">
-                  <div className="text-center bg-zinc-300 text-black text-xs">
-                  {task.completed ? "Mark Incomplete": "Mark Complete"}
+                  <div className="text-centertext-[10px]">
+                    {task.completed ? "Mark Incomplete" : "Mark Complete"}
                   </div>
                 </TooltipContent>
               </Tooltip>
             </div>
             <span
               ref={titleInputRef}
-              defaultValue={title}
               contentEditable={isEditingTitle}
               suppressContentEditableWarning
               onClick={(e) => {
@@ -151,28 +165,62 @@ const TaskModal = () => {
               onKeyDown={(e) => {
                 if (e.key === "Enter") {
                   e.preventDefault();
-                  const newTitle = e.currentTarget.textContent || "";
-                  handleSave(newTitle);
                   e.currentTarget.blur();
                 }
                 if (e.key === "Escape") {
                   handleCancel();
-                  setIsEditingTitle(false);
-                  e.currentTarget.blur();
                 }
               }}
-              className={`text-[25px] w-full block break-words whitespace-pre-wrap font-[inter-bold] px-2 py-1 rounded-[4px] focus:outline-1 focus:outline-blue-500 leading-snug cursor-text`}
+              className="text-3xl font-[inter-bold] h-fit px-2 w-full block break-words whitespace-pre-wrap rounded-[3px] focus:outline-1 focus:outline-blue-500 leading-snug cursor-pointer focus:cursor-text"
             >
               {title}
             </span>
           </header>
           <section className="flex">
-            <div className="flex py-1 items-start justify-center mx-2 text-white/80">
-              <CgDetailsMore size={20} />
+            <div className="w-10 flex justify-center dark:text-white/90 text-black/90">
+              <CgDetailsMore size={23} />
             </div>
             <div className="flex-1">
-              <p className="px-1.5 text-lg text-white/80">Description</p>
-              
+              <p className="px-1.5 mb-2 text-[16px] font-[inter-med] text-black/90 dark:text-white/90">Description</p>
+              {!isEditingDesc && !task.description && (
+                <div
+                  onClick={() => {
+                    setIsEditingDesc(true);
+                    descInputRef.current?.focus();
+                  }}
+                  className="px-2 py-1 text-sm cursor-pointer text-black/80 dark:text-white/60 rounded-[3px] "
+                >
+                  Add a description
+                </div>
+              )}
+
+              {(isEditingDesc || task.description) && (
+                <span
+                  ref={descInputRef}
+                  contentEditable
+                  suppressContentEditableWarning
+                  onBlur={(e) => {
+                    const newDescription = e.currentTarget.textContent?.trim() || "";
+                    setIsEditingDesc(false);
+                    if(!newDescription) return;
+                    if(newDescription !== task.description){
+                      updateTask({taskId: taskId!, data: {description: newDescription}})
+                    } else{ return;}
+                 }}
+                  onKeyDown={(e) => {
+                    if(e.key === "Enter"){
+                      setIsEditingDesc(false);
+                      e.currentTarget.blur();
+                    }
+                    if(e.key === "Escape"){
+                      setIsEditingDesc(false);
+                    }
+                  }}
+                  className={`text-[14px] text-black/80 dark:text-white/60 w-full block break-words whitespace-pre-wrap font-[inter] px-2 py-1 rounded-[3px] focus:outline-1 focus:outline-blue-500 leading-snug cursor-pointer focus:cursor-text`}
+                >
+                  {task.description}
+                </span>
+              )}
             </div>
           </section>
         </div>
