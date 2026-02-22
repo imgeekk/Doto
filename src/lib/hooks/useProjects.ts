@@ -17,6 +17,7 @@ import {
   reorderColumns,
   deleteProject,
   deleteColumn,
+  updateTask,
 } from "@/app/actions/services";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { task } from "better-auth/react";
@@ -212,6 +213,48 @@ export function useProject(projectId: string) {
           columnsWithTasks: old.columnsWithTasks.map((col: ColumnWithTasks) =>
             col.id === columnId ? { ...col, title: newTitle } : col,
           ),
+        };
+      });
+      return { previousData };
+    },
+
+    onError: (_err, _vars, context) => {
+      queryClient.setQueryData(["project", projectId], context?.previousData);
+    },
+  });
+
+  // update task
+
+  const updateTaskMutation = useMutation({
+    mutationFn: ({ taskId, data }: { taskId: string; data: any }) =>
+      updateTask(taskId, data),
+    onMutate: async ({ taskId, data }) => {
+      await queryClient.cancelQueries({ queryKey: ["project", projectId] });
+
+      const previousData = queryClient.getQueryData(["project", projectId]);
+
+      queryClient.setQueryData(["project", projectId], (old: any) => {
+        if (!old) return old;
+
+        return {
+          ...old,
+          columnsWithTasks: old.columnsWithTasks.map(
+            (col: ColumnWithTasks) => ({
+              ...col,
+              tasks: col.tasks.map((t) =>
+                t.id === taskId ? { ...t, ...data } : t,
+              ),
+            }),
+          ),
+        };
+      });
+
+      queryClient.setQueryData(["task", taskId], (old: any) => {
+        if (!old) return old;
+
+        return {
+          ...old,
+          ...data,
         };
       });
       return { previousData };
@@ -575,6 +618,7 @@ export function useProject(projectId: string) {
     updateProjectTitle: updateProjectTitle.mutate,
     updateColumnTitle: updateColumnTitle.mutate,
     updateTaskTitle: updateTaskTitleMutation.mutate,
+    updateTask: updateTaskMutation.mutate,
     createTask: createTaskMutation.mutate,
     createColumn: createColumnMutation.mutate,
     deleteColumn: deleteColumnMutation.mutate,
