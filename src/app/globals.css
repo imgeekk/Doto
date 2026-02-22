@@ -21,19 +21,15 @@
   src: url(../../public/Fonts/Inter/Inter_28pt-Regular.ttf);
 }
 
-@font-face {
-  font-family: monument;
-  src: url(../../public/Fonts/Monument/MonumentGrotesk_Regular-s.p.e26e8bd9.ttf);
-}
 
 @font-face {
   font-family: inter-bold;
-  src: url(../../public/Fonts/Inter/Inter_28pt-Medium.ttf);
+  src: url(../../public/Fonts/Inter/Inter_28pt-Bold.ttf);
 }
 
 @font-face {
-  font-family: intermed;
-  src: url(../../public/Fonts/Inter/Inter_24pt-Medium.ttf);
+  font-family: inter-med;
+  src: url(../../public/Fonts/Inter/Inter_28pt-Medium.ttf);
 }
 
 @font-face {

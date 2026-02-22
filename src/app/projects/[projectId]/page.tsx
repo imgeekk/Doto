@@ -130,32 +130,6 @@ const Page = () => {
     setIsEditingProjectTitle(false);
   };
 
-  // async function createTask(taskData: {
-  //   title: string;
-  //   description?: string;
-  //   // assignee?: string;
-  //   dueDate?: string;
-  //   priority?: "low" | "medium" | "high";
-  // }) {}
-
-  // async function handleCreateTask(e: any) {
-  //   e.preventDefault();
-
-  //   const formData = new FormData(e.currentTarget);
-  //   const taskData = {
-  //     title: formData.get("title") as string,
-  //     description: (formData.get("description") as string) || undefined,
-  //     // assignee: formData.get("assignee") as string || undefined,
-  //     dueDate: (formData.get("dueDate") as string) || undefined,
-  //     priority:
-  //       (formData.get("priority") as "low" | "medium" | "high") || "medium",
-  //   };
-
-  //   if (taskData.title?.trim()) {
-  //     await createTask(taskData);
-  //   }
-  // }
-
   const queryClient = useQueryClient();
   const onDragEnd = async (result: any) => {
     const { source, destination, type } = result;
@@ -236,6 +210,21 @@ const Page = () => {
 
         newColumns[sourceColumnIndex].tasks = sourceTasks;
         newColumns[destinationColumnIndex].tasks = destTasks;
+
+        // cache update for task modal
+        queryClient.setQueryData(["task", movedTask.id], (old: any) => {
+          if(!old) return old;
+
+          return {
+            ...old,
+            columnId: destinationCol.id,
+            column: {
+              ...old.column,
+              id: destinationCol.id,
+              title: destinationCol.title,
+            }
+          }
+        })
       }
 
       // local update
@@ -394,7 +383,7 @@ const Page = () => {
                       setIsEditingColumnTitle(false);
                     }
                   }}
-                  className={`text-lg w-full block font-[inter-bold] px-2 py-1 rounded-[4px] focus:outline-1 focus:outline-blue-500 hover:bg-black/10 dark:hover:bg-white/10 leading-snug break-words ${
+                  className={`text-lg w-full block font-[inter-med] px-2 py-1 rounded-[4px] focus:outline-1 focus:outline-blue-500 hover:bg-black/10 dark:hover:bg-white/10 leading-snug break-words ${
                     !isEditingColumnTitle
                       ? "hover:cursor-pointer"
                       : "focus:cursor-text bg-white dark:bg-zinc-800"
@@ -433,11 +422,9 @@ const Page = () => {
                     <SortableTask
                       index={index}
                       key={task.id}
-                      task={task}
                       taskTitle={task.title}
                       taskId={task.id}
                       taskCompleted={task.completed}
-                      taskColumnTitle={column.title}
                     ></SortableTask>
                   ))}
                   {provided.placeholder}
@@ -462,7 +449,7 @@ const Page = () => {
                   id=""
                   value={taskTitle}
                   onChange={(e) => setTaskTitle(e.target.value)}
-                  className="resize-none w-full px-2 py-2 rounded-[4px] bg-zinc-50 dark:bg-zinc-800 border not-hover:border-blue-500 outline-none font-[monument]nt] "
+                  className="resize-none w-full px-2 py-2 rounded-[4px] bg-zinc-50 dark:bg-zinc-800 border not-hover:border-blue-500 outline-none font-[inter]nt] "
                   autoFocus
                 ></textarea>
                 <div className="flex space-x-2 items-center">
@@ -496,18 +483,14 @@ const Page = () => {
   }
   function SortableTask({
     index,
-    task,
     taskTitle,
     taskId,
     taskCompleted,
-    taskColumnTitle,
   }: {
     index: number;
-    task: Task;
     taskTitle: string;
     taskId: string;
     taskCompleted: boolean;
-    taskColumnTitle: string;
   }) {
     const [addingTask, setAddingTask] = useState(false);
     const timeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -531,25 +514,6 @@ const Page = () => {
             className="group mb-2.5"
           >
             <Card className="flex rounded-[4px] mx-1 dark:bg-[#131316] bg-[#f5f9ff] hover:cursor-pointer shadow-xs border-none shadow-gray-400 dark:shadow-none">
-              {/* <div
-                id="sliding checkbox"
-                onPointerDown={(e) => {
-                  e.stopPropagation();
-                  setTaskComplete({
-                    taskId: taskId,
-                    completed: !taskCompleted,
-                  });
-                }}
-                className={`absolute h-4 w-4 ml-2 rounded-full border-1 border-zinc-900 dark:border-white flex items-center justify-center opacity-0 transition-all duration-200 group-hover:opacity-100  ${
-                  taskCompleted
-                    ? "bg-green-500 opacity-100 border-none"
-                    : "bg-transparent"
-                }`}
-              >
-                {taskCompleted && (
-                  <Check size={10} className="text-white dark:text-zinc-900" />
-                )}
-              </div> */}
               <span
               id="task-title"
                 {...provided.dragHandleProps}
@@ -558,15 +522,15 @@ const Page = () => {
                 }}
                 className="flex-1 min-w-0 leading-snug break-words p-2 !cursor-pointer"
               >
-                {task.title}
+                {taskTitle}
               </span>
               <div className="flex p-3 items-start justify-center">
                 <div
                   onClick={(e) => {
                     e.stopPropagation();
                     setTaskComplete({
-                      taskId: task.id,
-                      completed: !task.completed,
+                      taskId: taskId,
+                      completed: !taskCompleted,
                     });
                   }}
                   className={`w-4 h-4 rounded-xs border-1 border-black/30 dark:border-white/30 flex items-center justify-center ${taskCompleted ? "bg-blue-500 border-none" : "bg-transparent"}`}
@@ -608,7 +572,7 @@ const Page = () => {
   }
 
   return (
-    <div className="h-screen max-w-[100vw] font-[monument] flex flex-col items-center">
+    <div className="h-screen max-w-[100vw] font-[inter] flex flex-col items-center">
       <Header visible={true} className="mb-5" />
       {/* Everything after header */}
       <motion.section
@@ -670,7 +634,7 @@ const Page = () => {
 
         {/* Filter dialog */}
         <Dialog open={isFilterOpen} onOpenChange={setIsFilterOpen}>
-          <DialogContent className="w-[95vw] max-w-[425px] mx-auto font-[monument]nt]">
+          <DialogContent className="w-[95vw] max-w-[425px] mx-auto font-[inter]nt]">
             <DialogHeader>
               <DialogTitle className="">Filter Tasks</DialogTitle>
               <p className="text-xs sm:text-sm text-zinc-600">
@@ -748,17 +712,6 @@ const Page = () => {
                         key={column.id}
                         column={column}
                       >
-                        {/* <ul>
-                          {column.tasks.map((task, index) => (
-                            <li key={index} className="mb-3">
-                              <SortableTask
-                                taskTitle={task.title}
-                                taskId={task.id}
-                                taskCompleted={task.completed}
-                              ></SortableTask>
-                            </li>
-                          ))}
-                        </ul> */}
                       </DraggableColumn>
                     ))}
                     {provided.placeholder}
@@ -778,7 +731,7 @@ const Page = () => {
                       name="title"
                       id=""
                       placeholder="Enter column title"
-                      className="resize-none text-md w-full px-3 py-2 rounded-[4px] bg-zinc-50 dark:bg-zinc-800 border not-hover:border-blue-500 outline-none font-[monument] "
+                      className="resize-none text-md w-full px-3 py-2 rounded-[4px] bg-zinc-50 dark:bg-zinc-800 border not-hover:border-blue-500 outline-none font-[inter] "
                       autoFocus
                     ></input>
                     <div className="flex space-x-2 items-center">
@@ -808,16 +761,6 @@ const Page = () => {
                 </button>
               )}
             </DragDropContext>
-            <div>
-              {reorderingColumns && (
-                <p className="text-4xl font-[monument]">
-                  Reordering columns...
-                </p>
-              )}
-              {isReorderingTasks && (
-                <p className="text-4xl font-[monument]">Reordering tasks...</p>
-              )}
-            </div>
           </section>
         </main>
       </motion.section>

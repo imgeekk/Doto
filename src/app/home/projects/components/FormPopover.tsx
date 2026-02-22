@@ -45,7 +45,7 @@ const FormPopover = ({
       <PopoverTrigger className="h-full w-full">{children}</PopoverTrigger>
       <PopoverContent
         align={align}
-        className="w-80 pt-3 font-[monument]"
+        className="w-80 pt-3 font-[inter]"
         side={side}
         sideOffset={sideOffset}
       >
