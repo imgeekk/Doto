@@ -3,6 +3,8 @@
 import prisma from "@/app/lib/prisma";
 import { Column, ColumnWithTasks, Project, Task, TaskWithColumn } from "../../config/model";
 
+type TaskUpdate = Partial<Task>;
+
 // ---Project Services---
 
 async function getProjects(userId: string): Promise<Project[]> {
@@ -264,6 +266,20 @@ async function createTask(task: {
   }
 }
 
+async function updateTask(taskId: string, data: TaskUpdate) {
+  try {
+    const updatedTask = await prisma.tasks.update({
+      where: {
+        id: taskId,
+      },
+      data: data
+    });
+    return updatedTask;
+  } catch (err) {
+    throw err;
+  }
+}
+
 async function setComplete(taskId: string, completed: boolean) {
   try {
     const data = await prisma.tasks.update({
@@ -400,4 +416,5 @@ export {
   reorderColumns,
   reorderTasks,
   updateTaskTitle,
+  updateTask,
 };
