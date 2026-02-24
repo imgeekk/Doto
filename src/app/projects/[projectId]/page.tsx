@@ -30,6 +30,7 @@ import {
   DropdownSeparator,
 } from "@/components/basic-dropdown";
 import { reorderColumns, reorderTasks } from "@/app/actions/services";
+import { CgDetailsMore } from "react-icons/cg";
 
 const Page = () => {
   const router = useRouter();
@@ -152,16 +153,16 @@ const Page = () => {
       const [movedColumn] = newColumns.splice(source.index, 1);
       newColumns.splice(destination.index, 0, movedColumn);
 
-      //local update
+      // local update
       setLocalColumns(newColumns);
 
       //cache update
-      queryClient.setQueryData(["projects", project!.id], (old: any) => {
+      queryClient.setQueryData(["project", project!.id], (old: any) => {
         if (!old) return old;
 
         return {
           ...old,
-          columns: newColumns,
+          columnsWithTaks: newColumns,
         };
       });
 
@@ -213,7 +214,7 @@ const Page = () => {
 
         // cache update for task modal
         queryClient.setQueryData(["task", movedTask.id], (old: any) => {
-          if(!old) return old;
+          if (!old) return old;
 
           return {
             ...old,
@@ -222,16 +223,16 @@ const Page = () => {
               ...old.column,
               id: destinationCol.id,
               title: destinationCol.title,
-            }
-          }
-        })
+            },
+          };
+        });
       }
 
       // local update
       setLocalColumns(newColumns);
 
       // cache update
-      queryClient.setQueryData(["projects", project!.id], (old: any) => {
+      queryClient.setQueryData(["project", project!.id], (old: any) => {
         if (!old) return old;
 
         return {
@@ -276,13 +277,6 @@ const Page = () => {
     const [isAddingTask, setIsAddingTask] = useState(false);
     const [taskTitle, setTaskTitle] = useState("");
 
-    const hasHydrated = useRef(false);
-    useEffect(() => {
-      if (!hasHydrated.current) {
-        setLocalColumns(columns);
-        hasHydrated.current = true;
-      }
-    }, [columns]);
 
     useEffect(() => {
       if (isEditingColumnTitle && columnTitleRef.current) {
@@ -353,7 +347,7 @@ const Page = () => {
           <Card
             {...provided.draggableProps}
             ref={provided.innerRef}
-            className="w-full mx-2 sm:flex-shrink-0 sm:w-75 h-fit p-2 rounded-[6px] bg-zinc-100 dark:bg-[#09090B] shadow-xs shadow-gray-500 dark:shadow-none"
+            className="w-75 mx-2 sm:flex-shrink-0 h-fit p-2 rounded-[6px] bg-[#F7F5F6] dark:bg-[#161616] shadow-xs border-0 dark:border-1 dark:border-white/5 shadow-gray-400 dark:shadow-black/80"
           >
             <div
               {...provided.dragHandleProps}
@@ -422,6 +416,7 @@ const Page = () => {
                     <SortableTask
                       index={index}
                       key={task.id}
+                      task={task}
                       taskTitle={task.title}
                       taskId={task.id}
                       taskCompleted={task.completed}
@@ -435,7 +430,7 @@ const Page = () => {
               <div className="p-1">
                 <Button
                   variant="ghost"
-                  className="w-full rounded-[4px]"
+                  className="w-full flex items-center justify-center gap-1 rounded-[4px] max-sm:text-[13px]"
                   onClick={() => setIsAddingTask(true)}
                 >
                   <Plus size={15} />
@@ -449,12 +444,12 @@ const Page = () => {
                   id=""
                   value={taskTitle}
                   onChange={(e) => setTaskTitle(e.target.value)}
-                  className="resize-none w-full px-2 py-2 rounded-[4px] bg-zinc-50 dark:bg-zinc-800 border not-hover:border-blue-500 outline-none font-[inter]nt] "
+                  className="resize-none w-full px-2 py-2 rounded-[4px] bg-zinc-50 dark:bg-zinc-800 border not-hover:border-blue-500 outline-none font-[inter] max-sm:text-sm"
                   autoFocus
                 ></textarea>
                 <div className="flex space-x-2 items-center">
                   <Button
-                    className="bg-blue-400 rounded-[4px] hover:bg-blue-300 text-zinc-900"
+                    className="bg-blue-400 rounded-[4px] hover:bg-blue-300 text-zinc-900 max-sm:text-[12px]"
                     onClick={handleCreateTask}
                   >
                     Add Task
@@ -483,11 +478,13 @@ const Page = () => {
   }
   function SortableTask({
     index,
+    task,
     taskTitle,
     taskId,
     taskCompleted,
   }: {
     index: number;
+    task: Task;
     taskTitle: string;
     taskId: string;
     taskCompleted: boolean;
@@ -513,33 +510,44 @@ const Page = () => {
             ref={provided.innerRef}
             className="group mb-2.5"
           >
-            <Card className="flex rounded-[4px] mx-1 dark:bg-[#131316] bg-[#f5f9ff] hover:cursor-pointer shadow-xs border-none shadow-gray-400 dark:shadow-none">
-              <span
-              id="task-title"
-                {...provided.dragHandleProps}
-                onClick={() => {
-                  taskModal.onOpen(taskId);
-                }}
-                className="flex-1 min-w-0 leading-snug break-words p-2 !cursor-pointer"
-              >
-                {taskTitle}
-              </span>
-              <div className="flex p-3 items-start justify-center">
-                <div
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setTaskComplete({
-                      taskId: taskId,
-                      completed: !taskCompleted,
-                    });
+            <Card className="flex flex-col rounded-[4px] mx-1 dark:bg-[#1F1F1F] bg-[#ffffff] hover:cursor-pointer shadow-xs border-none dark:border-white/5 shadow-gray-400 dark:shadow-black/80">
+              <div className="flex">
+                <span
+                  id="task-title"
+                  {...provided.dragHandleProps}
+                  onClick={() => {
+                    taskModal.onOpen(taskId);
                   }}
-                  className={`w-4 h-4 rounded-xs border-1 border-black/30 dark:border-white/30 flex items-center justify-center ${taskCompleted ? "bg-blue-500 border-none" : "bg-transparent"}`}
+                  className="flex-1 flex items-center min-w-0 max-sm:text-sm leading-snug break-words p-2 !cursor-pointer"
                 >
-                  {taskCompleted && (
-                    <Check size={15} className="text-white dark:text-black" />
-                  )}
+                  {taskTitle}
+                </span>
+                <div
+                  id="checkbox-container"
+                  className="flex p-3 items-start justify-center"
+                >
+                  <div
+                    id="checkbox"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setTaskComplete({
+                        taskId: taskId,
+                        completed: !taskCompleted,
+                      });
+                    }}
+                    className={`w-4 h-4 rounded-xs border-1 border-black/30 dark:border-white/30 flex items-center justify-center ${taskCompleted ? "bg-blue-500 border-none" : "bg-transparent"}`}
+                  >
+                    {taskCompleted && (
+                      <Check size={15} className="text-white dark:text-black" />
+                    )}
+                  </div>
                 </div>
               </div>
+              {task.description &&
+              <section className="flex items-center justify-start flex-wrap px-3 pb-2 text-black/40 dark:text-white/50">
+              <CgDetailsMore size={16} />
+              </section>
+  }
             </Card>
           </div>
         )}
@@ -550,9 +558,20 @@ const Page = () => {
   if (isLoading) {
     return (
       <div className="relative h-screen w-full">
-        <Header visible={true} />
+        <Header visible={true}  className="mb-5"/>
         <div className="absolute inset-0 h-screen flex items-center justify-center">
           <RippleWaveLoader />
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="relative h-screen w-full">
+        <Header visible={true}  className="mb-5"/>
+        <div className="absolute inset-0 h-screen flex items-center justify-center">
+          <h1 className="text-sm font-[inter] tracking-tighter text-black/70 dark:text-white/70">Yo dawg wsg. Oh about the error.. couldn't fetch it twin :(</h1>
         </div>
       </div>
     );
@@ -578,14 +597,14 @@ const Page = () => {
       <motion.section
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        className="h-screen w-full flex flex-col "
+        className="h-screen w-full flex flex-col"
       >
         {/* NavBar */}
-        <nav className="bg-transparent backdrop-blur-2xl flex flex-col">
+        <nav className="bg-transparent backdrop-blur-2xl flex flex-col px-3">
           <Button
             id="back-button"
             variant="ghost"
-            className="w-fit mx-5"
+            className="w-fit px-1 pr-2"
             onClick={() => router.push("/projects")}
           >
             <MdKeyboardArrowLeft size={15} />
@@ -613,12 +632,11 @@ const Page = () => {
                   setIsEditingProjectTitle(false);
                 }
               }}
-              className="text-2xl font-[inter-bold] tracking-wide mx-5 p-1 px-2 max-w-[90%] truncate whitespace-nowrap rounded-[4px] focus:outline-1 focus:outline-blue-500 hover:bg-black/10 dark:hover:bg-white/10 hover:cursor-pointer focus:cursor-text"
+              className="text-2xl sm:text-3xl font-[inter-bold] p-1 px-2 max-w-[90%] truncate whitespace-nowrap rounded-[4px] focus:outline-1 focus:outline-blue-500 hover:bg-black/10 dark:hover:bg-white/10 focus:bg-transparent dark:focus:bg-transparent hover:cursor-pointer focus:cursor-text"
             >
               {localProjectTitle}
             </span>
 
-            <div className="px-3">
               <button
                 className="dark:hover:bg-zinc-800 hover:bg-zinc-300 p-1 flex gap-1 items-center text-sm hover:cursor-pointer rounded-sm"
                 onClick={() => onFilterClick()}
@@ -628,7 +646,6 @@ const Page = () => {
                   <span className="text-[10px]">{filterCount}</span>
                 )}
               </button>
-            </div>
           </div>
         </nav>
 
@@ -692,7 +709,7 @@ const Page = () => {
 
         {/* Main section */}
         <main className="flex-1 p-3">
-          <section className="h-full flex max-sm:flex-col overflow-x-auto flex-1 overflow-auto custom-scrollbar">
+          <section className="h-full flex overflow-x-auto flex-1 overflow-auto custom-scrollbar">
             <DragDropContext onDragEnd={onDragEnd}>
               <Droppable
                 droppableId="columns"
@@ -704,15 +721,14 @@ const Page = () => {
                     id="columns container"
                     {...provided.droppableProps}
                     ref={provided.innerRef}
-                    className="flex max-sm:flex-col max-sm:space-x-0 max-sm:space-y-4"
+                    className="flex"
                   >
                     {localColumns.map((column, index) => (
                       <DraggableColumn
                         index={index}
                         key={column.id}
                         column={column}
-                      >
-                      </DraggableColumn>
+                      ></DraggableColumn>
                     ))}
                     {provided.placeholder}
                   </ol>
@@ -726,7 +742,7 @@ const Page = () => {
                     handleCreateNewColumn(formData);
                   }}
                 >
-                  <Card className="w-full sm:w-75 p-2 mx-2 space-y-4 rounded-[6px] bg-zinc-100 dark:bg-zinc-950 shadow-md shadow-gray-300 dark:shadow-none">
+                  <Card className="w-75 p-2 mx-2 space-y-4 rounded-[6px] bg-[#F7F5F6] dark:bg-[#161616] shadow-xs border-0 dark:border-1 dark:border-white/5 shadow-gray-400 dark:shadow-black/80">
                     <input
                       name="title"
                       id=""
@@ -754,7 +770,7 @@ const Page = () => {
               ) : (
                 <button
                   onClick={() => setIsAddingColumn(true)}
-                  className="p-3 rounded-[6px] bg-zinc-300 hover:bg-zinc-300/50 dark:bg-white/20 dark:hover:bg-white/10 backdrop-blur-[2px] text-md sm:flex-shrink-0 h-10 sm:w-75 flex items-center justify-center hover:cursor-pointer gap-1 mx-2"
+                  className="p-3 rounded-[6px] bg-black/20 hover:bg-black/10 dark:bg-white/20 dark:hover:bg-white/10 backdrop-blur-[2px] text-md sm:flex-shrink-0 h-10 min-w-75 flex items-center justify-center hover:cursor-pointer gap-1 mx-2"
                 >
                   <Plus size={15} />
                   Add a column
