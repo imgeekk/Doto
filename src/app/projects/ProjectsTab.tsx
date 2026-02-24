@@ -9,7 +9,8 @@ import { useProjects } from "@/lib/hooks/useProjects";
 import RippleWaveLoader from "@/components/ui/ripple-loader";
 
 function ProjectsTabs({ userId }: { userId: string }) {
-  const { createProject, deleteProject, projects, isLoading, error } = useProjects();
+  const { createProject, deleteProject, projects, isLoading, error } =
+    useProjects();
 
   const createProjectModal = useCreateProjectModal();
   function handleCreateNewColumn() {}
@@ -17,7 +18,9 @@ function ProjectsTabs({ userId }: { userId: string }) {
   if (error) {
     return (
       <div className="absolute inset-0 flex items-center justify-center">
-        Error While Fetching Projects
+        <h1 className="text-sm font-[inter] tracking-tighter text-black/70 dark:text-white/70">
+          Yo dawg wsg. Oh about the error.. couldn't fetch your projects twin :(
+        </h1>
       </div>
     );
   }
@@ -110,7 +113,11 @@ function ProjectsTabs({ userId }: { userId: string }) {
               <p>No active projects</p>
             ) : (
               activeProjects.map((project) => (
-                <ProjectCard key={project.id} project={project} deleteProject={deleteProject} />
+                <ProjectCard
+                  key={project.id}
+                  project={project}
+                  deleteProject={deleteProject}
+                />
               ))
             )}
           </section>
@@ -124,12 +131,14 @@ function ProjectsTabs({ userId }: { userId: string }) {
           </header>
           <section className="p-2 flex-1 min-h-0 overflow-y-auto">
             {closedProjects.length === 0 ? (
-              <p>
-                No closed projects
-              </p>
+              <p>No closed projects</p>
             ) : (
               closedProjects.map((project) => (
-                <ProjectCard key={project.id} project={project} deleteProject={deleteProject} />
+                <ProjectCard
+                  key={project.id}
+                  project={project}
+                  deleteProject={deleteProject}
+                />
               ))
             )}
           </section>
@@ -146,7 +155,11 @@ function ProjectsTabs({ userId }: { userId: string }) {
               <p>No projects</p>
             ) : (
               projects.map((project) => (
-                <ProjectCard key={project.id} project={project} deleteProject={deleteProject} />
+                <ProjectCard
+                  key={project.id}
+                  project={project}
+                  deleteProject={deleteProject}
+                />
               ))
             )}
           </section>
