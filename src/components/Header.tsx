@@ -71,7 +71,7 @@ const Header = ({ visible, className }: { visible: Boolean; className?: string }
                 width={100}
                 height={100}
                 className="h-9 w-9 rounded-full border-1 border-border hover:border-primary transition-colors"
-              /> : <User className="h-9 w-9 rounded-full border-1 border-border hover:border-primary transition-colors p-1"/>}
+              /> : <User className="h-8 w-8 rounded-full p-1"/>}
             </DropdownTrigger>
             <DropdownContent align="end" className="w-56">
               <DropdownItem className="gap-2" disabled>
