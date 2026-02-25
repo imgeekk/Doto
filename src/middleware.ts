@@ -15,7 +15,7 @@ export async function middleware(req: NextRequest) {
   const res = NextResponse.next();
 
   const isLoggedIn = !!session;
-  const isProtectedRoute = protectedRoutes.includes(pathname);
+  const isProtectedRoute = pathname.startsWith("/projects");
   const isOnAuthRoute = pathname.startsWith("/api/auth");
 
   if(isProtectedRoute && !isLoggedIn){
@@ -38,5 +38,5 @@ export async function middleware(req: NextRequest) {
 };
 
 export const config = {
-  matcher: ["/", "/profile", "/projects", "/new-project", "/signup"]
-}
+  matcher: ["/profile/:path*", "/projects/:path*", "/new-project", "/signup"]
+};
