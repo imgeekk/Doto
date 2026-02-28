@@ -280,6 +280,19 @@ async function updateTask(taskId: string, data: TaskUpdate) {
   }
 }
 
+async function deleteTask(taskId: string) {
+  try {
+    const tasks = await prisma.tasks.delete({
+      where: {
+        id: taskId,
+      },
+    });
+    return tasks;
+  } catch (err) {
+    throw err;
+  }
+}
+
 async function setComplete(taskId: string, completed: boolean) {
   try {
     const data = await prisma.tasks.update({
@@ -408,6 +421,7 @@ export {
   getTask,
   updateProject,
   createTask,
+  deleteTask,
   updateColumn,
   createColumn,
   deleteColumn,
