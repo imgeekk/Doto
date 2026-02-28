@@ -40,11 +40,11 @@ const ProjectClient = ({ user }: any) => {
           <p></p>
         </aside>
         <section className="flex-1 flex flex-col p-3">
-            <header className="font-[inter-med] text-3xl mb-5">
+            <header className="font-[inter-med] text-3xl mb-5 mt-5">
               Your Workspace
             </header>
             <div className="relative flex-1 min-h-0 ">
-             <ProjectsTabs userId={user.id} /> 
+             <ProjectsTabs userId={user.id} />
             </div>
           </section>
         {/* <div className="mt-10">

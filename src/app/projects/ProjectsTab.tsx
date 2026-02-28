@@ -35,11 +35,11 @@ function ProjectsTabs({ userId }: { userId: string }) {
 
   if (projects.length === 0) {
     return (
-      <div className="absolute inset-0 flex items-center justify-center">
-        <p>No projects available</p>
+      <div className="absolute inset-0 flex flex-col items-center justify-center">
+        <p className="text-2xl">No projects available</p>
         <button
           onClick={() => createProjectModal.onOpen()}
-          className="flex items-center gap-1 text-sm text-primary mt-3"
+          className="flex items-center gap-1 text-sm text-white dark:text-black mt-3 bg-blue-500 px-2 py-1.5 rounded-[4px] hover:cursor-pointer"
         >
           <Plus size={16} />
           Create your first project

@@ -25,7 +25,7 @@ const CreateProjectModal = () => {
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="w-[95vw] max-w-[425px] mx-auto font-[inter] top-[35%]">
         <DialogHeader>
-          <h1 className="text-xl font-[inter-bold] mb-4">Create New Project</h1>
+          <h1 className="sm:text-xl font-[inter-med] mb-4">Create New Project</h1>
         </DialogHeader>
         <form onSubmit={(e) => {
           e.preventDefault();
@@ -34,12 +34,12 @@ const CreateProjectModal = () => {
         }}>
           <input
             name="title"
-            className="w-full p-2 border dark:border-white/10 border-black/10 rounded-[3px] mb-4 focus:outline-1 focus:outline-blue-500"
+            className="max-sm:text-sm w-full p-2 border dark:border-white/10 border-black/10 rounded-[3px] mb-4 focus:outline-1 focus:outline-blue-500"
             placeholder="Project Name"
           ></input>
           <textarea
             name="description"
-            className="resize-none w-full p-2 border dark:border-white/10 border-black/10 rounded-[3px] mb-4 focus:outline-1 focus:outline-blue-500"
+            className="max-sm:text-sm resize-none w-full p-2 border dark:border-white/10 border-black/10 rounded-[3px] mb-4 focus:outline-1 focus:outline-blue-500"
             placeholder="Project Description"
           ></textarea>
           <div className="w-full flex justify-end">
