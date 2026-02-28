@@ -49,7 +49,7 @@ const page = () => {
               setError(e.error.message);
             },
             onSuccess: () => {
-              router.push("/profile");
+              router.push("/projects");
             },
           }
         );
