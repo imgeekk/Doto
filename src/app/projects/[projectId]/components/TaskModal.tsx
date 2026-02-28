@@ -12,7 +12,7 @@ import RippleWaveLoader from "@/components/ui/ripple-loader";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams } from "next/navigation";
 import { ComponentRef, useEffect, useRef, useState } from "react";
-import { MdDelete, MdKeyboardArrowDown } from "react-icons/md";
+import { MdDelete, MdDeleteOutline, MdKeyboardArrowDown } from "react-icons/md";
 import { CgDetailsMore } from "react-icons/cg";
 import useTaskModal from "@/hooks/use-task-modal";
 import { getTask } from "@/app/actions/services";
@@ -29,6 +29,7 @@ import { Button } from "@/components/ui/button-1";
 import { WiTime4 } from "react-icons/wi";
 import { IoMdTime } from "react-icons/io";
 import { PiSquareHalfBottomFill } from "react-icons/pi";
+import { motion } from "framer-motion";
 
 const TaskModal = () => {
   const taskId = useTaskModal((state) => state.taskId);
@@ -38,7 +39,7 @@ const TaskModal = () => {
   const queryClient = useQueryClient();
   const params = useParams<{ projectId: string }>();
 
-  const { updateTask, setTaskComplete } = useProject(params.projectId);
+  const { updateTask, setTaskComplete, deleteTask } = useProject(params.projectId);
 
   const { data: task, isLoading } = useQuery({
     queryKey: ["task", taskId],
@@ -50,6 +51,9 @@ const TaskModal = () => {
   const [description, setDescription] = useState("");
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [isEditingDesc, setIsEditingDesc] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState(false);
+
+  const MotionButton = motion.create(Button);
 
   useEffect(() => {
     if (task) {
@@ -95,7 +99,10 @@ const TaskModal = () => {
   if (isLoading || !task) {
     return (
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="w-[95vw] max-w-[425px] mx-auto font-[inter] top-[10vh] !translate-y-0 p-0 h-15">
+        <DialogContent
+          showCloseButton={false}
+          className="w-[95vw] max-w-[425px] mx-auto font-[inter] top-[10vh] !translate-y-0 p-0 h-15"
+        >
           <RippleWaveLoader className="h-5 w-1" />
         </DialogContent>
       </Dialog>
@@ -132,19 +139,42 @@ const TaskModal = () => {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent showCloseButton={false} className="p-0 w-[95vw] max-w-[425px] max-h-[85vh] mx-auto font-[inter] top-[10vh] !translate-y-0 flex flex-col overflow-hidden">
-        <DialogHeader className="px-6 h-15 flex flex-row items-center justify-between border-b-1">
+      <DialogContent
+        showCloseButton={false}
+        className="p-0 w-[95vw] max-w-[425px] max-h-[85vh] mx-auto font-[inter] top-[10vh] !translate-y-0 flex flex-col overflow-hidden"
+      >
+        <DialogHeader className="pl-6 pr-3 h-15 flex flex-row items-center justify-between border-b-1">
           <button className="text-black/90 font-[inter-bold] dark:text-white/75 bg-black/20 dark:bg-zinc-800 dark:hover:bg-zinc-700 hover:cursor-pointer w-fit p-1 px-1.5 rounded-sm text-sm">
             {task?.column.title}{" "}
             <MdKeyboardArrowDown className="inline-block text-xl" />
           </button>
-          <div>
-          <button><MdDelete/></button>
-          <DialogClose asChild>
-            <Button variant="ghost" size="icon">
-              <X className="h-4 w-4" />
+          <div className="flex items-center justify-center gap-2">
+            {deleteConfirm && (
+              <MotionButton
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 100 }}
+                onClick={() => {
+                  deleteTask(task.id);
+                  setDeleteConfirm(false);
+                  onClose();
+                }}
+                className="p-2 rounded-[4px] bg-red-500 hover:bg-red-400  text-white text-xs"
+              >
+                Confirm delete
+              </MotionButton>
+            )}
+            <Button
+              variant="ghost"
+              className="p-2.5"
+              onClick={() => setDeleteConfirm(!deleteConfirm)}
+            >
+              <MdDeleteOutline />
             </Button>
-          </DialogClose>
+            <DialogClose asChild>
+              <Button variant="ghost" size="icon">
+                <X className="h-4 w-4" />
+              </Button>
+            </DialogClose>
           </div>
         </DialogHeader>
         <div
