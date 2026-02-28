@@ -277,7 +277,6 @@ export function useProject(projectId: string) {
       await queryClient.cancelQueries({ queryKey: ["project", projectId] });
 
       const previousData = queryClient.getQueryData(["project", projectId]);
-      console.log(previousData);
 
       queryClient.setQueryData(["project", projectId], (old: any) => {
         if (!old) return old;
@@ -292,9 +291,6 @@ export function useProject(projectId: string) {
           ),
         };
       });
-
-       const newData = queryClient.getQueryData(["project", projectId]);
-      console.log(newData);
 
       return { previousData };
     },
@@ -349,6 +345,7 @@ export function useProject(projectId: string) {
       const previousData = queryClient.getQueryData(["project", projectId]);
 
       const tempId = `temp-${Date.now()}`;
+      const optimisticTask = {id: tempId, ...newTask, completed: false, description: null, isOptimistic: true}
 
       queryClient.setQueryData(["project", projectId], (old: any) => {
         if (!old) return old;
@@ -357,11 +354,13 @@ export function useProject(projectId: string) {
           ...old,
           columnsWithTasks: old.columnsWithTasks.map((col: ColumnWithTasks) =>
             col.id === newTask.columnId
-              ? { ...col, tasks: [...col.tasks, { ...newTask, id: tempId }] }
+              ? { ...col, tasks: [...col.tasks, optimisticTask] }
               : col,
           ),
         };
       });
+
+      queryClient.setQueryData(["task", tempId], optimisticTask)
 
       return { previousData, tempId };
     },
