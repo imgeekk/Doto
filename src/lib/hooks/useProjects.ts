@@ -13,14 +13,12 @@ import {
   createColumn,
   setComplete,
   moveTaskToColumn,
-  reorderTasks,
-  reorderColumns,
   deleteProject,
   deleteColumn,
   updateTask,
+  deleteTask,
 } from "@/app/actions/services";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { task } from "better-auth/react";
 
 export function useProjects() {
   const queryClient = useQueryClient();
@@ -35,6 +33,9 @@ export function useProjects() {
     queryKey: ["projects", userId],
     queryFn: () => getProjects(userId!),
     enabled: !!userId,
+    staleTime: Infinity,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
   });
 
   const createProject = useMutation({
@@ -137,8 +138,10 @@ export function useProject(projectId: string) {
     queryKey: ["project", projectId],
     queryFn: () => getProjectsWithColumns(projectId),
     enabled: !!projectId,
+    staleTime: Infinity,
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
+    refetchOnMount: false,
   });
 
   const project = data?.project;
@@ -265,6 +268,42 @@ export function useProject(projectId: string) {
     },
   });
 
+  // delete task
+
+  const deleteTaskMutation = useMutation({
+    mutationFn: (taskId: string) => deleteTask(taskId),
+
+    onMutate: async (taskId) => {
+      await queryClient.cancelQueries({ queryKey: ["project", projectId] });
+
+      const previousData = queryClient.getQueryData(["project", projectId]);
+      console.log(previousData);
+
+      queryClient.setQueryData(["project", projectId], (old: any) => {
+        if (!old) return old;
+
+        return {
+          ...old,
+          columnsWithTasks: old.columnsWithTasks.map(
+            (col: ColumnWithTasks) => ({
+              ...col,
+              tasks: col.tasks.filter((t) => (t.id !== taskId)),
+            }),
+          ),
+        };
+      });
+
+       const newData = queryClient.getQueryData(["project", projectId]);
+      console.log(newData);
+
+      return { previousData };
+    },
+
+    onError: (_err, _vars, context) => {
+      queryClient.setQueryData(["project", projectId], context?.previousData);
+    },
+  });
+
   // update task title
 
   const updateTaskTitleMutation = useMutation({
@@ -324,16 +363,29 @@ export function useProject(projectId: string) {
         };
       });
 
-      return { previousData };
+      return { previousData, tempId };
     },
 
     onError: (_err, _vars, context) => {
       queryClient.setQueryData(["project", projectId], context?.previousData);
     },
 
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: ["project", projectId],
+    onSuccess: (newTask, variables, context) => {
+      queryClient.setQueryData(["project", projectId], (old: any) => {
+        if (!old) return old;
+        return {
+          ...old,
+          columnsWithTasks: old.columnsWithTasks.map((col: ColumnWithTasks) =>
+            col.id === variables.columnId
+              ? {
+                  ...col,
+                  tasks: col.tasks.map(
+                    (t) => (t.id === context?.tempId ? newTask : t),
+                  ),
+                }
+              : col,
+          ),
+        };
       });
     },
   });
@@ -373,12 +425,19 @@ export function useProject(projectId: string) {
       queryClient.setQueryData(["project", projectId], context?.previousData);
     },
 
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: ["project", projectId],
+    onSuccess: (newColumn, variables, context) => {
+      queryClient.setQueryData(["project", projectId], (old: any) => {
+        if (!old) return old;
+        return {
+          ...old,
+          columnsWithTasks: old.columnsWithTasks.map((col: ColumnWithTasks) =>
+            col.id === "temp-column" ? newColumn : col,
+          ),
+        };
       });
     },
   });
+
 
   // delete column
 
@@ -516,100 +575,6 @@ export function useProject(projectId: string) {
     },
   });
 
-  // const reorderTasksMutation = useMutation({
-  //   mutationFn: reorderTasks,
-
-  //   onMutate: async (taskUpdates) => {
-  //     await queryClient.cancelQueries({ queryKey: ["project", projectId] });
-
-  //     const previousData = queryClient.getQueryData<{
-  //       project: Project;
-  //       columnsWithTasks: ColumnWithTasks[];
-  //     }>(["project", projectId]);
-
-  //     if (!previousData) return;
-
-  //     const oldColumns = structuredClone(previousData.columnsWithTasks);
-
-  //     for (const update of taskUpdates) {
-  //       let movedTask: Task | undefined;
-
-  //       for (const col of oldColumns) {
-  //         const idx = col.tasks.findIndex((t) => t.id === update.id);
-  //         if (idx !== -1) {
-  //           movedTask = col.tasks.splice(idx, 1)[0];
-  //           break;
-  //         }
-  //       }
-
-  //       if (movedTask) {
-  //         const targetColumn = oldColumns.find(
-  //           (col) => col.id === update.columnId,
-  //         );
-  //         if (targetColumn) {
-  //           movedTask.sortOrder = update.sortOrder;
-  //           movedTask.columnId = update.columnId;
-  //           targetColumn.tasks.splice(update.sortOrder, 0, movedTask);
-  //         }
-  //       }
-  //     }
-
-  //     queryClient.setQueryData(["project", projectId], {
-  //       ...previousData,
-  //       columnsWithTasks: oldColumns,
-  //     });
-
-  //     return { previousData };
-  //   },
-
-  //   onError: (_err, variables, context) => {
-  //     if (context?.previousData) {
-  //       queryClient.setQueryData(["project", projectId], context.previousData);
-  //     }
-  //   },
-  // });
-
-  // const reorderColumnsMutation = useMutation({
-  //   mutationFn: ({
-  //     projectId,
-  //     columnUpdates,
-  //   }: {
-  //     projectId: string;
-  //     columnUpdates: { id: string; sortOrder: number }[];
-  //   }) => reorderColumns(projectId, columnUpdates),
-
-  //   onMutate: async ({ projectId, columnUpdates }) => {
-  //     await queryClient.cancelQueries({ queryKey: ["project", projectId] });
-
-  //     const previousData = queryClient.getQueryData(["project", projectId]);
-  //     if (!previousData) return { previousData: undefined };
-
-  //     queryClient.setQueryData(["project", projectId], (old: any) => {
-  //       if (!old || !Array.isArray(old.columnsWithTasks)) return old;
-
-  //       const updated = [...old.columnsWithTasks]
-  //         .map((col) => {
-  //           const u = columnUpdates.find((c) => c.id === col.id);
-  //           return u ? { ...col, sortOrder: u.sortOrder } : col;
-  //         })
-  //         .sort((a, b) => a.sortOrder - b.sortOrder);
-
-  //       return { ...old, columnsWithTasks: updated };
-  //     });
-
-  //     return { previousData };
-  //   },
-
-  //   onError: (err, variables, context) => {
-  //     if (context?.previousData) {
-  //       queryClient.setQueryData(
-  //         ["project", variables.projectId],
-  //         context.previousData,
-  //       );
-  //     }
-  //   },
-  // });
-
   return {
     project,
     columns,
@@ -620,11 +585,10 @@ export function useProject(projectId: string) {
     updateTaskTitle: updateTaskTitleMutation.mutate,
     updateTask: updateTaskMutation.mutate,
     createTask: createTaskMutation.mutate,
+    deleteTask: deleteTaskMutation.mutate,
     createColumn: createColumnMutation.mutate,
     deleteColumn: deleteColumnMutation.mutate,
     moveTask: moveTaskMutation.mutate,
     setTaskComplete: setCompleteMutation.mutate,
-    // reorderTask: reorderTasksMutation.mutate,
-    // reorderColumns: reorderColumnsMutation.mutate,
   };
 }
