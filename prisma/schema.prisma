@@ -102,7 +102,7 @@ model Tasks {
   title       String
   description String?
   assignedTo  String?
-  dueDate     String?
+  dueDate     DateTime?
   coverColor  String?
   priority    priority @default(medium)
   sortOrder   Int      @default(0)

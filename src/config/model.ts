@@ -28,7 +28,8 @@ export interface Task{
     description: string | null;
     completed: boolean,
     assignedTo: string | null;
-    dueDate: string | null;
+    coverColor: string | null;
+    dueDate: Date | null;
     priority: "low" | "medium" | "high";
     sortOrder: number;
     createdAt: Date;

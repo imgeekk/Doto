@@ -30,6 +30,11 @@ import { WiTime4 } from "react-icons/wi";
 import { IoMdTime } from "react-icons/io";
 import { PiSquareHalfBottomFill } from "react-icons/pi";
 import { motion } from "framer-motion";
+import { cover } from "three/src/extras/TextureUtils.js";
+import { Calendar } from "@/components/ui/calendar";
+import { ColumnWithTasks } from "@/config/model";
+
+const MotionButton = motion.create(Button);
 
 const TaskModal = () => {
   const taskId = useTaskModal((state) => state.taskId);
@@ -39,12 +44,15 @@ const TaskModal = () => {
   const queryClient = useQueryClient();
   const params = useParams<{ projectId: string }>();
 
-  const { updateTask, setTaskComplete, deleteTask } = useProject(params.projectId);
+  const { updateTask, setTaskComplete, deleteTask } = useProject(
+    params.projectId,
+  );
 
   const { data: task, isLoading } = useQuery({
     queryKey: ["task", taskId],
     queryFn: () => getTask(taskId!),
     enabled: !!taskId,
+    refetchOnWindowFocus: false,
   });
 
   const [title, setTitle] = useState("");
@@ -52,8 +60,28 @@ const TaskModal = () => {
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [isEditingDesc, setIsEditingDesc] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
+  const [date, setDate] = useState<Date | undefined>(
+    task?.dueDate ? new Date(task.dueDate) : undefined,
+  );
 
-  const MotionButton = motion.create(Button);
+  const coverColors = [
+    "#803FA5",
+    "#216E4E",
+    "#7F5F01",
+    "#AE2E24",
+    "#9E4C00",
+    "#1558BC",
+    "#943D73",
+    "#63666B",
+  ];
+
+  useEffect(() => {
+    setDeleteConfirm(false);
+  }, [taskId]);
+
+  useEffect(() => {
+    setDate(task?.dueDate ? new Date(task.dueDate) : undefined);
+  }, [task?.dueDate]);
 
   useEffect(() => {
     if (task) {
@@ -81,20 +109,6 @@ const TaskModal = () => {
       descInputRef.current.focus();
     }
   }, [isEditingDesc]);
-
-  const onSubmit = async (formData: FormData) => {
-    const newTitle = formData.get("title") as string;
-
-    if (!newTitle) return;
-    if (newTitle === task?.title) return;
-
-    try {
-      titleInputRef.current?.blur();
-      updateTask({ taskId: taskId!, data: { title: newTitle } });
-    } catch (error) {
-      console.log(error);
-    }
-  };
 
   if (isLoading || !task) {
     return (
@@ -141,10 +155,13 @@ const TaskModal = () => {
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent
         showCloseButton={false}
-        className="p-0 w-[95vw] max-w-[425px] max-h-[85vh] mx-auto font-[inter] top-[10vh] !translate-y-0 flex flex-col overflow-hidden"
+        className="p-0 w-[95vw] max-w-[425px] max-h-[85vh] mx-auto font-[inter] top-[10vh] !translate-y-0 flex flex-col overflow-hidden border-0"
       >
-        <DialogHeader className="pl-6 pr-3 h-15 flex flex-row items-center justify-between border-b-1">
-          <button className="text-black/90 font-[inter-bold] dark:text-white/75 bg-black/20 dark:bg-zinc-800 dark:hover:bg-zinc-700 hover:cursor-pointer w-fit p-1 px-1.5 rounded-sm text-sm">
+        <DialogHeader
+          style={{ backgroundColor: task.coverColor ? task.coverColor : "" }}
+          className="pl-6 pr-3 h-15 flex flex-row items-center justify-between border-b-1"
+        >
+          <button className="text-black/90 font-[inter-bold] dark:text-white/80 bg-zinc-300 hover:bg-zinc-200 dark:bg-zinc-700 dark:hover:bg-zinc-600 transition-colors duration-200 hover:cursor-pointer w-fit p-1 px-2 rounded-[4px] text-sm">
             {task?.column.title}{" "}
             <MdKeyboardArrowDown className="inline-block text-xl" />
           </button>
@@ -165,14 +182,14 @@ const TaskModal = () => {
             )}
             <Button
               variant="ghost"
-              className="p-2.5"
+              className="rounded-[4px]"
               onClick={() => setDeleteConfirm(!deleteConfirm)}
             >
-              <MdDeleteOutline />
+              <MdDelete className="dark:text-white text-black !h-5 !w-5" />
             </Button>
             <DialogClose asChild>
-              <Button variant="ghost" size="icon">
-                <X className="h-4 w-4" />
+              <Button variant="ghost" size="icon" className="rounded-[4px]">
+                <X className="!h-5 !w-5 dark:text-white text-black" />
               </Button>
             </DialogClose>
           </div>
@@ -197,7 +214,7 @@ const TaskModal = () => {
                         completed: !task.completed,
                       });
                     }}
-                    className={`w-4 h-4 mx-2 rounded-xs border-1 border-black/90 dark:border-white/40 flex items-center justify-center cursor-pointer ${task?.completed ? "bg-blue-500 border-none" : "bg-transparent"}`}
+                    className={`w-4 h-4 mx-2 rounded-xs border-1 border-black/90 dark:border-white/40 flex items-center justify-center cursor-pointer ${task?.completed ? "bg-blue-500 border-none" : "bg-transparent"} transition-colors duration-200`}
                   >
                     {task?.completed && (
                       <Check size={15} className="text-white dark:text-black" />
@@ -240,21 +257,90 @@ const TaskModal = () => {
           <section className="flex items-center justify-start flex-wrap pl-10 mb-10 gap-3">
             <Popover>
               <PopoverTrigger asChild>
-                <button className="border-1 border-black/10 dark:border-white/10 rounded-[4px] cursor-pointer hover:bg-zinc-200 dark:hover:bg-zinc-800 flex items-center justify-center p-1.5 px-2 gap-1 max-sm:text-sm">
+                <button className="border-1 border-black/10 dark:border-white/10 rounded-[4px] cursor-pointer hover:bg-zinc-200 dark:hover:bg-zinc-800 transition-colors duration-200 flex items-center justify-center p-1.5 px-2 gap-1 text-sm">
                   <IoMdTime size={18} />
                   Due Date
                 </button>
               </PopoverTrigger>
-              <PopoverContent className="w-80">this</PopoverContent>
+              <PopoverContent className="w-85 font-[inter] shadow-2xl shadow-black/50">
+                <header className="font-[inter-med] text-center mb-3">
+                  Due date
+                </header>
+                <hr></hr>
+                <Calendar
+                  mode="single"
+                  selected={date}
+                  onSelect={(newDate) => {
+                    setDate(newDate);
+                    updateTask({
+                      taskId: taskId!,
+                      data: { dueDate: newDate },
+                    });
+                  }}
+                  className="my-3 rounded-md border"
+                />
+                <Button
+                  variant="ghost"
+                  onClick={() => {
+                    updateTask({
+                      taskId: taskId!,
+                      data: { dueDate: null },
+                    });
+                  }}
+                  className="w-full rounded-[4px] hover:bg-black/15 dark:hover:bg-white/10 flex items-center justify-center gap-1 text-sm"
+                >
+                  <X className="dark:text-white text-black" />
+                  Remove Due Date
+                </Button>
+              </PopoverContent>
             </Popover>
             <Popover>
               <PopoverTrigger asChild>
-                <button className="border-1 border-black/10 dark:border-white/10 rounded-[4px] cursor-pointer hover:bg-zinc-200 dark:hover:bg-zinc-800 flex items-center justify-center p-1.5 px-2 gap-1 max-sm:text-sm">
+                <button className="border-1 border-black/10 dark:border-white/10 rounded-[4px] cursor-pointer hover:bg-zinc-200 dark:hover:bg-zinc-800 transition-colors duration-200 flex items-center justify-center p-1.5 px-2 gap-1 text-sm">
                   <PiSquareHalfBottomFill size={18} />
                   Change Cover
                 </button>
               </PopoverTrigger>
-              <PopoverContent className="w-80">this</PopoverContent>
+              <PopoverContent className="w-80 font-[inter] shadow-2xl shadow-black/50">
+                <header className="font-[inter-med] text-center mb-3">
+                  Change cover
+                </header>
+                <hr></hr>
+                <section className="my-3 flex items-center justify-between flex-wrap gap-3">
+                  {coverColors.map((color, index) => (
+                    <div
+                      key={index}
+                      style={{ backgroundColor: color }}
+                      onClick={() => {
+                        updateTask({
+                          taskId: taskId!,
+                          data: { coverColor: color },
+                        });
+                      }}
+                      className="w-14 h-8 rounded-[4px] hover:cursor-pointer hover:opacity-80 transition-opacity duration-100"
+                    >
+                      {task.coverColor === color && (
+                        <div className="h-full w-full flex items-center justify-center">
+                          <Check size={20} className="text-white" />
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </section>
+                <Button
+                  variant="ghost"
+                  onClick={() => {
+                    updateTask({
+                      taskId: taskId!,
+                      data: { coverColor: null },
+                    });
+                  }}
+                  className="w-full rounded-[4px] hover:bg-black/15 dark:hover:bg-white/10 flex items-center justify-center gap-1 text-sm"
+                >
+                  <X className="dark:text-white text-black" />
+                  Remove cover
+                </Button>
+              </PopoverContent>
             </Popover>
           </section>
           <section className="flex">

@@ -411,6 +411,7 @@ export function useProject(projectId: string) {
             {
               id: "temp-column",
               title: newColumn.title,
+              isOptimistic: true,
               tasks: [],
             },
           ],

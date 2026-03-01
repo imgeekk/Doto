@@ -3,7 +3,7 @@
 import Header from "@/components/Header";
 import { Card } from "@/components/ui/card";
 import { useProject } from "@/lib/hooks/useProjects";
-import { Check, MoreHorizontal, Plus, X } from "lucide-react";
+import { Check, MoreHorizontal, Plus, Timer, X } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import RippleWaveLoader from "@/components/ui/ripple-loader";
@@ -53,6 +53,8 @@ import {
   arrayMove,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { useTheme } from "next-themes";
+import { IoMdTime } from "react-icons/io";
 
 // (((((((((((((((((((((((((((( SortableTask )))))))))))))))))))))))))))))))
 
@@ -63,6 +65,7 @@ const SortableTask = React.memo(function SortableTask({
   task: Task & { isOptimistic?: boolean };
   onSetComplete: (args: { taskId: string; completed: boolean }) => void;
 }) {
+  const { resolvedTheme } = useTheme();
   const taskModal = useTaskModal();
   const {
     attributes,
@@ -82,7 +85,7 @@ const SortableTask = React.memo(function SortableTask({
   if (task.isOptimistic) {
     const MotionCard = motion.create(Card);
     return (
-      <div ref={setNodeRef} style={style} className="group mb-2.5">
+      <div className="group mb-2.5">
         <MotionCard
           initial={{ opacity: 0.4 }}
           animate={{
@@ -112,27 +115,60 @@ const SortableTask = React.memo(function SortableTask({
     );
   }
 
+  const getDueDateLabel = (dueDate: any) => {
+    const d = new Date(dueDate);
+    if (isNaN(d.getTime())) return null;
+    const diff = Math.ceil(
+      (d.getTime() - new Date().setHours(0, 0, 0, 0)) / (1000 * 60 * 60 * 24),
+    );
+    if (diff < 0) return `${Math.abs(diff)}d overdue`;
+    if (diff === 0) return "Due today";
+    if (diff === 1) return "Due tomorrow";
+    return `${diff} days left`;
+  };
+
   return (
     <div ref={setNodeRef} style={style} className="mb-2.5">
-      <Card className="flex flex-col rounded-[4px] mx-1 dark:bg-[#1F1F1F] bg-white hover:cursor-pointer shadow-xs border-none dark:border-white/5 shadow-gray-400 dark:shadow-black/80">
-        <div className="flex">
+      <Card
+        style={{
+          backgroundColor: task.coverColor ? task.coverColor : ""
+        }}
+        className={`flex rounded-[4px] mx-1 dark:bg-[#1F1F1F] bg-white hover:cursor-pointer shadow-xs border-none dark:border-white/5 shadow-gray-400 dark:shadow-black/80 `}
+      >
+        <div
+          {...attributes}
+          {...listeners}
+          onClick={() => taskModal.onOpen(task.id)}
+          className="flex-1 flex-col"
+        >
           <span
-            {...attributes}
-            {...listeners}
-            onClick={() => taskModal.onOpen(task.id)}
-            className="flex-1 flex items-center min-w-0 max-sm:text-sm leading-snug break-words p-2 !cursor-pointer"
+            className={`flex-1 flex items-center min-w-0 max-sm:text-sm leading-snug break-words p-2 !cursor-pointer `}
           >
             {task.title}
           </span>
-          <div
-            onClick={(e) => {
-              e.stopPropagation();
-              onSetComplete({ taskId: task.id, completed: !task.completed });
-            }}
-            className="group flex p-3 items-start justify-center"
-          >
+          {(task.description || task.dueDate) && (
+            <section className="flex items-center justify-start gap-2.5 flex-wrap px-3 pb-2 text-black/40 dark:text-white/50">
+              {task.description && <CgDetailsMore size={16} />}
+              {task.dueDate && (
+                <span className="flex items-center justify-center gap-1 text-[13px]">
+                  <IoMdTime size={16} />
+                  {getDueDateLabel(task.dueDate)}
+                </span>
+              )}
+            </section>
+          )}
+        </div>
+        <div
+          id="checkbox-container"
+          onClick={(e) => {
+            e.stopPropagation();
+            onSetComplete({ taskId: task.id, completed: !task.completed });
+          }}
+          className="flex items-start justify-center"
+        >
+          <div className="group h-fit w-full p-3">
             <div
-              className={`w-4 h-4 rounded-xs border-1 border-black/40 dark:border-white/35 group-hover:border-black/20 dark:group-hover:border-white/20 transition-colors duration-100 flex items-center justify-center ${
+              className={`w-4 h-4 rounded-xs border-1 border-black/50 dark:border-white/35 group-hover:border-black/20 dark:group-hover:border-white/20 transition-colors duration-100 flex items-center justify-center ${
                 task.completed ? "bg-blue-500 border-none" : "bg-transparent"
               }`}
             >
@@ -142,11 +178,6 @@ const SortableTask = React.memo(function SortableTask({
             </div>
           </div>
         </div>
-        {task.description && (
-          <section className="flex items-center justify-start flex-wrap px-3 pb-2 text-black/40 dark:text-white/50">
-            <CgDetailsMore size={16} />
-          </section>
-        )}
       </Card>
     </div>
   );
@@ -188,7 +219,7 @@ const DraggableColumn = React.memo(function DraggableColumn({
   onCreateTask,
   onSetComplete,
 }: {
-  column: ColumnWithTasks;
+  column: ColumnWithTasks & { isOptimistic?: boolean };
   onUpdateColumnTitle: (args: { columnId: string; newTitle: string }) => void;
   onDeleteColumn: (columnId: string) => void;
   onCreateTask: (args: {
@@ -258,6 +289,50 @@ const DraggableColumn = React.memo(function DraggableColumn({
     setIsAddingTask(false);
   };
 
+  if (column.isOptimistic) {
+    const MotionCard = motion.create(Card);
+    return (
+      <div className="mx-2 sm:flex-shrink-0 w-75">
+        <MotionCard
+          initial={{ opacity: 0.4 }}
+          animate={{
+            opacity: [0.4, 0.7, 0.4],
+          }}
+          transition={{
+            duration: 0.6,
+            ease: "easeInOut",
+            repeat: Infinity,
+          }}
+          className="hover:cursor-not-allowed h-fit p-2 rounded-[6px] bg-[#F7F5F6] dark:bg-[#161616] shadow-none dark:shadow-xs border-1 border-black/10 dark:border-white/5 shadow-gray-400 dark:shadow-black/80"
+        >
+          {/* Column header — drag handle */}
+          <div className="flex items-center justify-between mb-2 pointer-events-none">
+            <div className="p-1">
+              <span className="text-lg w-full block font-[inter-med] px-2 py-1 rounded-[4px] focus:outline-1 focus:outline-blue-500 hover:bg-black/10 dark:hover:bg-white/10 focus:bg-transparent dark:focus:bg-transparent hover:cursor-pointer focus:cursor-text leading-snug break-words">
+                {localColumnTitle}
+              </span>
+            </div>
+            <div onPointerDown={(e) => e.stopPropagation()}>
+              <Button variant="ghost">
+                <MoreHorizontal size={15} />
+              </Button>
+            </div>
+          </div>
+          <hr className="mb-3"></hr>
+
+          <div className="p-1 pointer-events-none">
+            <Button
+              variant="ghost"
+              className="w-full flex items-center justify-center gap-1 rounded-[4px] max-sm:text-[13px]"
+            >
+              <Plus size={15} />
+              Add Task
+            </Button>
+          </div>
+        </MotionCard>
+      </div>
+    );
+  }
   const taskIds = column.tasks.map((t) => t.id);
 
   return (
@@ -320,6 +395,7 @@ const DraggableColumn = React.memo(function DraggableColumn({
             </Dropdown>
           </div>
         </div>
+        <hr className="mb-3"></hr>
 
         {/* Tasks */}
         <SortableContext items={taskIds} strategy={verticalListSortingStrategy}>
@@ -444,9 +520,6 @@ const Page = () => {
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    }),
   );
 
   useEffect(() => {
