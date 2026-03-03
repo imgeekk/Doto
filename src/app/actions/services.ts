@@ -334,7 +334,6 @@ async function reorderTasks(
   taskUpdates: { id: string; columnId: string; sortOrder: number }[],
 ) {
   try {
-    console.log("reordering tasks");
     // Create an array of update promises for the transaction
     const transaction = taskUpdates.map((update) =>
       prisma.tasks.update({

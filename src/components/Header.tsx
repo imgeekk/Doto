@@ -48,16 +48,16 @@ const Header = ({ visible, className }: { visible: Boolean; className?: string }
   };
 
   return (
-    <div className={twMerge("bg-white dark:bg-black/20 dark:text-white text-zinc-950 h-12 py-2 w-full flex justify-between items-center max-sm:px-5 sm:px-10", className)}>
+    <div className={twMerge("bg-[#ffffff] dark:bg-[#111111] dark:text-white text-zinc-950 h-12 py-2 w-full flex justify-between items-center max-sm:px-5 sm:px-10", className)}>
       <Link
         href="/"
-        className="flex items-center font-bold sm:text-2xl text-md font-[inter]"
+        className="flex items-center font-bold sm:text-[22px] text-md font-[inter]"
       >
         <div className="h-6 w-6 relative overflow-hidden rounded-[3px] mr-2"><Image src="/images/logog.png" alt="text" fill className="object-contain"/></div>
         Doto
       </Link>
 
-      <div className="flex gap-4 items-center leading-0">
+      <div className="flex gap-2 items-center leading-0">
         <div className="">
           <ThemeToggler visible={visible} />
         </div>
@@ -71,7 +71,7 @@ const Header = ({ visible, className }: { visible: Boolean; className?: string }
                 width={100}
                 height={100}
                 className="h-9 w-9 rounded-full border-1 border-border hover:border-primary transition-colors"
-              /> : <User className="h-8 w-8 rounded-full p-1"/>}
+              /> : <User className="h-7 w-7 rounded-full p-1"/>}
             </DropdownTrigger>
             <DropdownContent align="end" className="w-56">
               <DropdownItem className="gap-2" disabled>
