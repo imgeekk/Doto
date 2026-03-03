@@ -271,6 +271,7 @@ const TaskModal = () => {
                   mode="single"
                   selected={date}
                   onSelect={(newDate) => {
+                    newDate?.setHours(0, 0, 0, 0)
                     setDate(newDate);
                     updateTask({
                       taskId: taskId!,
