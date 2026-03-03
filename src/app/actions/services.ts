@@ -1,7 +1,13 @@
 "use server";
 
 import prisma from "@/app/lib/prisma";
-import { Column, ColumnWithTasks, Project, Task, TaskWithColumn } from "../../config/model";
+import {
+  Column,
+  ColumnWithTasks,
+  Project,
+  Task,
+  TaskWithColumn,
+} from "../../config/model";
 
 type TaskUpdate = Partial<Task>;
 
@@ -235,8 +241,8 @@ async function getTask(taskId: string): Promise<TaskWithColumn | null> {
         id: taskId,
       },
       include: {
-        column: true
-      }
+        column: true,
+      },
     });
     return data;
   } catch (err) {
@@ -272,7 +278,7 @@ async function updateTask(taskId: string, data: TaskUpdate) {
       where: {
         id: taskId,
       },
-      data: data
+      data: data,
     });
     return updatedTask;
   } catch (err) {
@@ -405,11 +411,68 @@ async function getProjectsWithColumns(projectId: string) {
     getColumnsWithTasks(projectId),
   ]);
 
-  if (!project) throw new Error("Board not found");
+  if (!project) throw new Error("Project not found");
 
   const tasks = await getTasksByProject(projectId);
 
   return { project, columnsWithTasks };
+}
+
+// ---Dashboard Services---
+async function getDashboardStats(userId: string, timezone: any) {
+
+ const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const todayEnd = new Date();
+  todayEnd.setHours(23, 59, 59, 999);
+
+  const [projectCount, taskCount, completedTaskCount, dueTodayTasks] =
+    await Promise.all([
+      prisma.projects.count({
+        where: {
+          userId,
+        },
+      }),
+
+      prisma.tasks.count({
+        where: {
+          column: {
+            project: {
+              userId,
+            },
+          },
+        },
+      }),
+
+      prisma.tasks.count({
+        where: {
+          completed: true,
+          column: {
+            project: {
+              userId,
+            },
+          },
+        },
+      }),
+
+      prisma.tasks.findMany({
+        where: {
+          dueDate: today,
+          column: {
+            project: {
+              userId,
+            },
+          },
+        },
+        orderBy: {
+          column: {
+            createdAt: "asc"
+          }
+        }
+      }),
+    ]);
+  return { projectCount, taskCount, completedTaskCount, dueTodayTasks };
 }
 
 export {
@@ -430,4 +493,5 @@ export {
   reorderTasks,
   updateTaskTitle,
   updateTask,
+  getDashboardStats,
 };

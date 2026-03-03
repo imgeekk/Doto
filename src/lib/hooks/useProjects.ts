@@ -1,7 +1,7 @@
 "use client";
 
 import { authClient } from "@/app/lib/auth-client";
-import { Column, ColumnWithTasks, Project, Task } from "@/config/model";
+import { ColumnWithTasks, Project, Task } from "@/config/model";
 import {
   createProjectWithDefaultColumn,
   getProjects,
