@@ -101,8 +101,7 @@ model Tasks {
   createdAt   DateTime @default(now())
   title       String
   description String?
-  assignedTo  String?
-  dueDate     DateTime?
+  dueDate     DateTime? @db.Date
   coverColor  String?
   priority    priority @default(medium)
   sortOrder   Int      @default(0)
