@@ -66,13 +66,13 @@ const TaskModal = () => {
 
   const coverColors = [
     "#9b4cc9",
-  "#2d996c", 
-  "#b78d17",
-  "#d34137",
-  "#ce680e",
-  "#2d9abf",
-  "#c64b97",
-  "#90949b",
+    "#2d996c",
+    "#b78d17",
+    "#d34137",
+    "#ce680e",
+    "#2d9abf",
+    "#c64b97",
+    "#90949b",
   ];
 
   useEffect(() => {
@@ -271,7 +271,7 @@ const TaskModal = () => {
                   mode="single"
                   selected={date}
                   onSelect={(newDate) => {
-                    newDate?.setHours(0, 0, 0, 0)
+                    newDate?.setHours(0, 0, 0, 0);
                     setDate(newDate);
                     updateTask({
                       taskId: taskId!,

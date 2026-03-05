@@ -82,14 +82,29 @@ async function updateProject(
   }
 }
 
-async function deleteProject(projectId: string): Promise<Project> {
+async function deleteProject(projectId: string, userId: string) {
   try {
-    const project = await prisma.projects.delete({
-      where: {
-        id: projectId,
-      },
+    const data = await prisma.$transaction(async (tx) => {
+      const project = await tx.projects.findUnique({
+        where: {
+          id: projectId,
+        },
+      });
+      await tx.projects.delete({
+        where: {
+          id: projectId,
+        },
+      });
+
+      await tx.activityLogs.create({
+        data: {
+          type: "PROJECT_DELETED",
+          userId,
+          message: `Project "${project?.title}" was deleted`,
+        },
+      });
     });
-    return project;
+    return data;
   } catch (err) {
     throw err;
   }
@@ -254,18 +269,32 @@ async function createTask(task: {
   title: string;
   columnId: string;
   sortOrder: number;
+  projectId: string;
+  userId: string;
 }) {
   try {
-    const data = await prisma.tasks.create({
-      data: {
-        title: task.title,
-        // description: task.description,
-        // dueDate: task.dueDate,
-        columnId: task.columnId,
-        sortOrder: task.sortOrder,
-        // priority: task.priority,
-      },
+    const data = await prisma.$transaction(async (tx) => {
+      const createdTask = await tx.tasks.create({
+        data: {
+          title: task.title,
+          columnId: task.columnId,
+          sortOrder: task.sortOrder,
+        },
+      });
+
+      await tx.activityLogs.create({
+        data: {
+          type: "TASK_CREATED",
+          taskId: createdTask.id,
+          projectId: task.projectId,
+          userId: task.userId,
+          message: `Task "${task.title}" was created`,
+        },
+      });
+
+      return createdTask;
     });
+
     return data;
   } catch (err) {
     throw err;
@@ -286,29 +315,67 @@ async function updateTask(taskId: string, data: TaskUpdate) {
   }
 }
 
-async function deleteTask(taskId: string) {
+async function deleteTask(taskId: string, projectId: string, userId: string) {
   try {
-    const tasks = await prisma.tasks.delete({
-      where: {
-        id: taskId,
-      },
+    const data = await prisma.$transaction(async (tx) => {
+      const task = await tx.tasks.findUnique({
+        where: {
+          id: taskId,
+        },
+      });
+
+      await tx.activityLogs.create({
+        data: {
+          type: "TASK_DELETED",
+          taskId,
+          projectId,
+          userId,
+          message: `Task "${task?.title}" was deleted`,
+        },
+      });
+
+      await tx.tasks.delete({
+        where: {
+          id: taskId,
+        },
+      });
     });
-    return tasks;
+    return data;
   } catch (err) {
     throw err;
   }
 }
 
-async function setComplete(taskId: string, completed: boolean) {
+async function setComplete(
+  taskId: string,
+  completed: boolean,
+  projectId: string,
+  userId: string,
+) {
   try {
-    const data = await prisma.tasks.update({
-      where: {
-        id: taskId,
-      },
-      data: {
-        completed: completed,
-      },
+    const data = await prisma.$transaction(async (tx) => {
+      const task = await tx.tasks.update({
+        where: {
+          id: taskId,
+        },
+        data: {
+          completed: completed,
+        },
+      });
+
+      await tx.activityLogs.create({
+        data: {
+          type: completed ? "TASK_COMPLETED" : "TASK_REOPENED",
+          taskId,
+          projectId,
+          userId,
+          message: `Task "${task.title}" was ${completed ? "completed" : "reopened"}`,
+        },
+      });
+
+      return task;
     });
+
     return data;
   } catch (err) {
     throw err;
@@ -382,27 +449,44 @@ async function createProjectWithDefaultColumn(projectData: {
   color?: string;
   userId: string;
 }) {
-  const project = await createProject({
-    title: projectData.title,
-    description: projectData.description,
-    color: projectData.color || "bg-blue-500",
-    userId: projectData.userId,
-  });
+  try {
+    const data = await prisma.$transaction(async (tx) => {
+      const project = await createProject({
+        title: projectData.title,
+        description: projectData.description,
+        color: projectData.color || "bg-blue-500",
+        userId: projectData.userId,
+      });
 
-  const defaultColumns = [
-    { title: "To Do", sortOrder: 0 },
-    { title: "In Progress", sortOrder: 1 },
-    { title: "Review", sortOrder: 3 },
-    { title: "Done", sortOrder: 4 },
-  ];
+      const defaultColumns = [
+        { title: "To Do", sortOrder: 0 },
+        { title: "In Progress", sortOrder: 1 },
+        { title: "Review", sortOrder: 3 },
+        { title: "Done", sortOrder: 4 },
+      ];
 
-  await Promise.all(
-    defaultColumns.map((column) =>
-      createColumn({ ...column, projectId: project.id }),
-    ),
-  );
+      await Promise.all(
+        defaultColumns.map((column) =>
+          createColumn({ ...column, projectId: project.id }),
+        ),
+      );
 
-  return project;
+      await tx.activityLogs.create({
+        data: {
+          type: "PROJECT_CREATED",
+          projectId: project.id,
+          userId: projectData.userId,
+          message: `Project "${project.title}" was created`,
+        },
+      });
+
+      return project;
+    });
+
+    return data;
+  } catch (err) {
+    throw err;
+  }
 }
 
 async function getProjectsWithColumns(projectId: string) {
@@ -420,59 +504,94 @@ async function getProjectsWithColumns(projectId: string) {
 
 // ---Dashboard Services---
 async function getDashboardStats(userId: string, timezone: any) {
-
- const today = new Date();
+  const today = new Date();
   today.setHours(0, 0, 0, 0);
 
   const todayEnd = new Date();
   todayEnd.setHours(23, 59, 59, 999);
 
-  const [projectCount, taskCount, completedTaskCount, dueTodayTasks] =
-    await Promise.all([
-      prisma.projects.count({
-        where: {
-          userId,
-        },
-      }),
+  const [
+    projectCount,
+    taskCount,
+    completedTaskCount,
+    dueTodayTasks,
+    recentActivity,
+  ] = await Promise.all([
+    prisma.projects.count({
+      where: {
+        userId,
+      },
+    }),
 
-      prisma.tasks.count({
-        where: {
-          column: {
+    prisma.tasks.count({
+      where: {
+        column: {
+          project: {
+            userId,
+          },
+        },
+      },
+    }),
+
+    prisma.tasks.count({
+      where: {
+        completed: true,
+        column: {
+          project: {
+            userId,
+          },
+        },
+      },
+    }),
+
+    prisma.tasks.findMany({
+      where: {
+        dueDate: today,
+        column: {
+          project: {
+            userId,
+          },
+        },
+      },
+      include: {
+        column: {
+          include: {
             project: {
-              userId,
+              select: {
+                title: true,
+              },
             },
           },
         },
-      }),
-
-      prisma.tasks.count({
-        where: {
-          completed: true,
-          column: {
-            project: {
-              userId,
-            },
-          },
+      },
+      orderBy: {
+        column: {
+          createdAt: "asc",
         },
-      }),
+      },
+    }),
 
-      prisma.tasks.findMany({
-        where: {
-          dueDate: today,
-          column: {
-            project: {
-              userId,
-            },
-          },
-        },
-        orderBy: {
-          column: {
-            createdAt: "asc"
-          }
-        }
-      }),
-    ]);
-  return { projectCount, taskCount, completedTaskCount, dueTodayTasks };
+    prisma.activityLogs.findMany({
+      where: {
+        userId,
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+      take: 10,
+      include: {
+        project: true,
+        task: true,
+      },
+    }),
+  ]);
+  return {
+    projectCount,
+    taskCount,
+    completedTaskCount,
+    dueTodayTasks,
+    recentActivity,
+  };
 }
 
 export {

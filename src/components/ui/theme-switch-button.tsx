@@ -36,7 +36,7 @@ export function ThemeSwitch({ className = "" }: ThemeSwitchProps) {
   return (
     <button
       onClick={toggleTheme}
-      className={`relative flex h-8 w-8 items-center justify-center rounded-full text-[var(--text-color-primary)] hover:opacity-80 hover:cursor-pointer transition-opacity overflow-hidden ${className}`}
+      className={`relative flex h-7 w-7 items-center justify-center rounded-full text-[var(--text-color-primary)] hover:opacity-80 hover:cursor-pointer transition-opacity overflow-hidden ${className}`}
     >
       <AnimatePresence mode="wait">
         {theme === "light" ? (

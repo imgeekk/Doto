@@ -36,7 +36,7 @@ const ProjectCard = ({
           ease: "easeInOut",
           repeat: Infinity,
         }}
-        className="flex p-2 border-1 mb-5 rounded-[4px]"
+        className="flex p-2 mb-5 rounded-[4px] dark:bg-[#1F1F1F] bg-white shadow-xs dark:shadow-none border border-black/5 dark:border-white/15 shadow-gray-400"
       >
         <div className="flex-1 hover:cursor-not-allowed">
           <h1 className="sm:text-xl mb-1">{project.title}</h1>
@@ -65,7 +65,7 @@ const ProjectCard = ({
     deleteProject(projectId);
   }
   return (
-    <Card className="flex p-2 border-1 mb-5 rounded-[4px]">
+    <Card className="flex p-2 mb-5 rounded-[4px] dark:bg-[#1F1F1F] bg-white shadow-xs dark:shadow-none border border-black/5 dark:border-white/15 shadow-gray-400">
       <div
         onClick={() => {
           if (project.isOptimistic) return;

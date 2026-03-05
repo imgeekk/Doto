@@ -19,6 +19,7 @@ model User {
   projectsOwned Projects[]
   accounts      Account[]
   sessions      Session[]
+  activityLogs  ActivityLogs[]
 
   @@map("user")
 }
@@ -78,6 +79,7 @@ model Projects {
   updatedAt   DateTime  @default(now())
   columns     Columns[]
   user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  activityLogs  ActivityLogs[]
 }
 
 enum projectStatus {
@@ -108,10 +110,27 @@ model Tasks {
   columnId    String
   completed   Boolean  @default(false)
   column      Columns  @relation(fields: [columnId], references: [id], onDelete: Cascade)
+  activityLogs  ActivityLogs[]
 }
 
 enum priority {
   low
   medium
   high
+}
+
+model ActivityLogs {
+ id           String    @id @default(cuid())
+ type         String
+ projectId    String?
+ taskId       String?
+ userId       String
+ message      String
+ createdAt    DateTime  @default(now())
+
+ project      Projects?  @relation(fields: [projectId], references: [id])
+ task         Tasks?     @relation(fields: [taskId], references: [id])
+ user         User      @relation(fields: [userId], references: [id])
+
+ @@map("activity_log")
 }

@@ -92,11 +92,13 @@ export function useProjects() {
           proj.id === context?.tempId ? result : proj,
         );
       });
+
+      queryClient.invalidateQueries({ queryKey: ["dashboard", userId] });
     },
   });
 
   const deleteProjectMutation = useMutation({
-    mutationFn: (projectId: string) => deleteProject(projectId),
+    mutationFn: (projectId: string) => deleteProject(projectId, userId!),
 
     onMutate: async (projectId) => {
       await queryClient.cancelQueries({
@@ -131,6 +133,8 @@ export function useProjects() {
 
 export function useProject(projectId: string) {
   const queryClient = useQueryClient();
+  const { data: session, isPending } = authClient.useSession();
+  const userId = session?.user.id;
 
   //fetch project
 
@@ -271,9 +275,11 @@ export function useProject(projectId: string) {
   // delete task
 
   const deleteTaskMutation = useMutation({
-    mutationFn: (taskId: string) => deleteTask(taskId),
+    mutationFn: (
+      taskId: string
+    ) => deleteTask(taskId, projectId, userId!),
 
-    onMutate: async (taskId) => {
+    onMutate: async ( taskId ) => {
       await queryClient.cancelQueries({ queryKey: ["project", projectId] });
 
       const previousData = queryClient.getQueryData(["project", projectId]);
@@ -286,17 +292,22 @@ export function useProject(projectId: string) {
           columnsWithTasks: old.columnsWithTasks.map(
             (col: ColumnWithTasks) => ({
               ...col,
-              tasks: col.tasks.filter((t) => (t.id !== taskId)),
+              tasks: col.tasks.filter((t) => t.id !== taskId),
             }),
           ),
         };
       });
+      console.log("delted")
 
       return { previousData };
     },
 
     onError: (_err, _vars, context) => {
       queryClient.setQueryData(["project", projectId], context?.previousData);
+    },
+
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["dashboard", userId] });
     },
   });
 
@@ -337,7 +348,11 @@ export function useProject(projectId: string) {
   //create task
 
   const createTaskMutation = useMutation({
-    mutationFn: createTask,
+    mutationFn: (newTask: {
+      title: string;
+      columnId: string;
+      sortOrder: number;
+    }) => createTask({ ...newTask, projectId, userId: userId! }),
 
     onMutate: async (newTask) => {
       await queryClient.cancelQueries({ queryKey: ["project", projectId] });
@@ -345,7 +360,13 @@ export function useProject(projectId: string) {
       const previousData = queryClient.getQueryData(["project", projectId]);
 
       const tempId = `temp-${Date.now()}`;
-      const optimisticTask = {id: tempId, ...newTask, completed: false, description: null, isOptimistic: true}
+      const optimisticTask = {
+        id: tempId,
+        ...newTask,
+        completed: false,
+        description: null,
+        isOptimistic: true,
+      };
 
       queryClient.setQueryData(["project", projectId], (old: any) => {
         if (!old) return old;
@@ -360,7 +381,7 @@ export function useProject(projectId: string) {
         };
       });
 
-      queryClient.setQueryData(["task", tempId], optimisticTask)
+      queryClient.setQueryData(["task", tempId], optimisticTask);
 
       return { previousData, tempId };
     },
@@ -378,14 +399,16 @@ export function useProject(projectId: string) {
             col.id === variables.columnId
               ? {
                   ...col,
-                  tasks: col.tasks.map(
-                    (t) => (t.id === context?.tempId ? newTask : t),
+                  tasks: col.tasks.map((t) =>
+                    t.id === context?.tempId ? newTask : t,
                   ),
                 }
               : col,
           ),
         };
       });
+
+      queryClient.invalidateQueries({ queryKey: ["dashboard", userId] });
     },
   });
 
@@ -437,7 +460,6 @@ export function useProject(projectId: string) {
       });
     },
   });
-
 
   // delete column
 
@@ -533,7 +555,7 @@ export function useProject(projectId: string) {
     }: {
       taskId: string;
       completed: boolean;
-    }) => setComplete(taskId, completed),
+    }) => setComplete(taskId, completed, projectId, userId!),
 
     onMutate: async ({ taskId, completed }) => {
       await queryClient.cancelQueries({ queryKey: ["project", projectId] });
@@ -572,6 +594,10 @@ export function useProject(projectId: string) {
       if (context?.previousData) {
         queryClient.setQueryData(["project", projectId], context.previousData);
       }
+    },
+
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["dashboard", userId] });
     },
   });
 

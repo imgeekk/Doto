@@ -47,6 +47,11 @@
   scroll-behavior: smooth;
 }
 
+#task-scrollable-section{
+  scroll-behavior: smooth;
+  scrollbar-width: thin;
+}
+
 /* projects grid */
 @media (max-width: 400px) {
   .grid-xs-1 {

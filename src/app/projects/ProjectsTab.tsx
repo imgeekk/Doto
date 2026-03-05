@@ -7,6 +7,7 @@ import { BsFilter } from "react-icons/bs";
 import useCreateProjectModal from "@/hooks/use-create-project-modal";
 import { useProjects } from "@/lib/hooks/useProjects";
 import RippleWaveLoader from "@/components/ui/ripple-loader";
+import { WaveLoader } from "@/components/wave-loader";
 
 function ProjectsTabs({ userId }: { userId: string }) {
   const { createProject, deleteProject, projects, isLoading, error } =
@@ -28,7 +29,7 @@ function ProjectsTabs({ userId }: { userId: string }) {
   if (isLoading || !projects) {
     return (
       <div className="absolute inset-0 flex items-center justify-center">
-        <RippleWaveLoader className="h-6 w-2" />
+      <WaveLoader/>
       </div>
     );
   }
