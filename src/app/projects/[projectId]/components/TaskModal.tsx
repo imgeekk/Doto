@@ -33,6 +33,7 @@ import { motion } from "framer-motion";
 import { cover } from "three/src/extras/TextureUtils.js";
 import { Calendar } from "@/components/ui/calendar";
 import { ColumnWithTasks } from "@/config/model";
+import { WaveLoader } from "@/components/wave-loader";
 
 const MotionButton = motion.create(Button);
 
@@ -117,7 +118,7 @@ const TaskModal = () => {
           showCloseButton={false}
           className="w-[95vw] max-w-[425px] mx-auto font-[inter] top-[10vh] !translate-y-0 p-0 h-15"
         >
-          <RippleWaveLoader className="h-5 w-1" />
+          <WaveLoader className="h-3 w-1.5" />
         </DialogContent>
       </Dialog>
     );

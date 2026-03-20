@@ -48,7 +48,7 @@ const Header = ({ visible, className }: { visible: Boolean; className?: string }
   };
 
   return (
-    <div className={twMerge("bg-[#ffffff] dark:bg-[#111111] dark:text-white text-zinc-950 h-12 py-2 w-full flex justify-between items-center max-sm:px-5 sm:px-10", className)}>
+    <div className={twMerge("bg-transparent dark:text-white text-zinc-950 h-12 py-2 w-full flex justify-between items-center max-sm:px-5 sm:px-10", className)}>
       <Link
         href="/"
         className="flex items-center font-bold sm:text-[22px] text-md font-[inter]"

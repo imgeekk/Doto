@@ -120,6 +120,9 @@ export function useProjects() {
         queryClient.setQueryData(["projects", userId], context.previousData);
       }
     },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["dashboard", userId] });
+    },
   });
 
   return {
@@ -217,6 +220,7 @@ export function useProject(projectId: string) {
         if (!old) return old;
 
         return {
+          ...old,
           columnsWithTasks: old.columnsWithTasks.map((col: ColumnWithTasks) =>
             col.id === columnId ? { ...col, title: newTitle } : col,
           ),
@@ -270,16 +274,18 @@ export function useProject(projectId: string) {
     onError: (_err, _vars, context) => {
       queryClient.setQueryData(["project", projectId], context?.previousData);
     },
+    onSuccess: () => {
+      console.log("fireddddd")
+      queryClient.invalidateQueries({ queryKey: ["dashboard", userId] });
+    },
   });
 
   // delete task
 
   const deleteTaskMutation = useMutation({
-    mutationFn: (
-      taskId: string
-    ) => deleteTask(taskId, projectId, userId!),
+    mutationFn: (taskId: string) => deleteTask(taskId, projectId, userId!),
 
-    onMutate: async ( taskId ) => {
+    onMutate: async (taskId) => {
       await queryClient.cancelQueries({ queryKey: ["project", projectId] });
 
       const previousData = queryClient.getQueryData(["project", projectId]);
@@ -297,7 +303,7 @@ export function useProject(projectId: string) {
           ),
         };
       });
-      console.log("delted")
+      console.log("delted");
 
       return { previousData };
     },

@@ -1,6 +1,11 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
+::selection {
+  background-color: #e2e2e2;
+  color: #003142;
+}
+
 @font-face {
   font-family: clashreg;
   src: url(../../public/Fonts/ClashDisplayComplete/ClashDisplay-Regular.otf);
@@ -21,6 +26,10 @@
   src: url(../../public/Fonts/Inter/Inter_28pt-Regular.ttf);
 }
 
+@font-face {
+  font-family: inter-light;
+  src: url(../../public/Fonts/Inter/Inter_28pt-Light.ttf);
+}
 
 @font-face {
   font-family: inter-bold;
@@ -42,15 +51,18 @@
   src: url(../../public/Fonts/Helvetica/Helvetica-Bold.ttf);
 }
 
-#scrollable-content{
+#scrollable-content {
   scrollbar-width: thin;
   scroll-behavior: smooth;
+  scrollbar-color: #3f3f46 transparent;
 }
 
 #task-scrollable-section{
   scroll-behavior: smooth;
   scrollbar-width: thin;
+  scrollbar-color: #3f3f46 transparent;
 }
+
 
 /* projects grid */
 @media (max-width: 400px) {

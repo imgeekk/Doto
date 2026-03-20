@@ -26,7 +26,7 @@ const Page = () => {
           transition={{ duration: 1 }}
           className="w-full flex flex-col items-center"
         >
-          <h1 id="heading" className="sm:text-8xl tracking-tighter font-[inter-bold] text-white text-6xl mt-40 mb-5 text-center">
+          <h1 id="heading" className="sm:text-8xl tracking-tighter font-[inter-med] text-white text-6xl mt-40 mb-5 text-center">
             <span className="font-[instrumentserif]">
               <AuroraText speed={2}>Organize</AuroraText>
             </span>{" "}
@@ -36,10 +36,10 @@ const Page = () => {
             </span>
             .
           </h1>
-          <h1 id="sub-title" className="sm:text-md text-white/70 font-[inter] text-xl text-center mb-5">
-            A modern <span className="text-white">project management tool</span> built for focused teams. <span className="text-white">Plan</span>{" "}
-            tasks, <span className="text-white">organize</span> workflows, and{" "}
-            <span className="text-white">track</span> progress without the
+          <h1 id="sub-title" className="sm:text-md text-white font-[inter-light] text-xl text-center mb-5">
+            A modern <span className="font-[inter-med]">project management tool</span> built for focused teams. <span className="font-[inter-med]">Plan</span>{" "}
+            tasks, <span className="font-[inter-med]">organize</span> workflows, and{" "}
+            <span className="font-[inter-med]">track</span> progress without the
             clutter.
           </h1>
           <div className="flex justify-center mb-4">
@@ -52,12 +52,12 @@ const Page = () => {
               </GradientButton>
             </Link>
           </div>
-          <div className="h-[90vh] sm:w-[90%] w-full relative overflow-hidden">
+          <div className="h-63 w-112 xs:h-72 xs:w-128 sm:h-90 sm:w-160 md:h-108 md:w-192 lg:h-153 lg:w-272 xl:h-180 xl:w-320 transition-all duration-100 relative overflow-hidden">
             <Image
-              src="/images/pic.jpg"
+              src="/images/pic.png"
               alt="image"
               fill
-              className="object-cover fade-bottom"
+              className="object-cover "
             ></Image>
           </div>
         </motion.div>

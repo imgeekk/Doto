@@ -6,7 +6,6 @@ import { useProject } from "@/lib/hooks/useProjects";
 import { Check, MoreHorizontal, Plus, Timer, X } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
-import RippleWaveLoader from "@/components/ui/ripple-loader";
 import React, { useEffect, useRef, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { BsFilter } from "react-icons/bs";
@@ -43,6 +42,7 @@ import {
   closestCorners,
   rectIntersection,
   MeasuringStrategy,
+  closestCenter,
 } from "@dnd-kit/core";
 import {
   SortableContext,
@@ -55,14 +55,17 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { useTheme } from "next-themes";
 import { IoMdTime } from "react-icons/io";
+import { WaveLoader } from "@/components/wave-loader";
 
 // (((((((((((((((((((((((((((( SortableTask )))))))))))))))))))))))))))))))
 
 const SortableTask = React.memo(function SortableTask({
   task,
+  isBeingDragged,
   onSetComplete,
 }: {
   task: Task & { isOptimistic?: boolean };
+  isBeingDragged: boolean;
   onSetComplete: (args: { taskId: string; completed: boolean }) => void;
 }) {
   const { resolvedTheme } = useTheme();
@@ -74,16 +77,23 @@ const SortableTask = React.memo(function SortableTask({
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: task.id, data: { type: "task", task } });
+  } = useSortable({
+    id: task.id,
+    data: { type: "task", task },
+    animateLayoutChanges: () => false,
+  });
 
   const style = {
     transform: CSS.Transform.toString(transform),
-    transition,
+    transition: isDragging ? undefined : transition,
     opacity: isDragging ? 0.3 : 1,
   };
 
   const [justCompleted, setJustCompleted] = useState(false);
 
+  if (isBeingDragged) {
+    return <div ref={setNodeRef} style={style} />;
+  }
   if (task.isOptimistic) {
     const MotionCard = motion.create(Card);
     return (
@@ -157,10 +167,10 @@ const SortableTask = React.memo(function SortableTask({
                         style={{ top: "50%", left: "50%" }}
                         initial={{ x: 0, y: 0, opacity: 1, scale: 1 }}
                         animate={{
-                          x: Math.cos((i * Math.PI * 2) / 8) * 28,
-                          y: Math.sin((i * Math.PI * 2) / 8) * 28,
+                          x: Math.cos((i * Math.PI * 2) / 8) * 35,
+                          y: Math.sin((i * Math.PI * 2) / 8) * 35,
                           opacity: 0,
-                          scale: 0,
+                          scale: 0.5,
                         }}
                         exit={{ opacity: 0 }}
                         transition={{ duration: 1, ease: "easeOut" }}
@@ -292,12 +302,16 @@ function TaskOverlay({ task }: { task: Task }) {
 
 const DraggableColumn = React.memo(function DraggableColumn({
   column,
+  placeholder,
+  activeTaskId,
   onUpdateColumnTitle,
   onDeleteColumn,
   onCreateTask,
   onSetComplete,
 }: {
   column: ColumnWithTasks & { isOptimistic?: boolean };
+  placeholder: { colId: string; index: number } | null;
+  activeTaskId: string | null;
   onUpdateColumnTitle: (args: { columnId: string; newTitle: string }) => void;
   onDeleteColumn: (columnId: string) => void;
   onCreateTask: (args: {
@@ -320,7 +334,11 @@ const DraggableColumn = React.memo(function DraggableColumn({
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: column.id, data: { type: "column" } });
+  } = useSortable({
+    id: column.id,
+    data: { type: "column" },
+    animateLayoutChanges: () => false,
+  });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -341,6 +359,10 @@ const DraggableColumn = React.memo(function DraggableColumn({
       }
     }
   }, [isEditingColumnTitle]);
+
+  useEffect(() => {
+    setLocalColumnTitle(column.title);
+  }, [column]);
 
   const handleSave = (newTitle: string) => {
     const trimmed = (newTitle || "").trim();
@@ -480,13 +502,23 @@ const DraggableColumn = React.memo(function DraggableColumn({
         {/* Tasks */}
         <SortableContext items={taskIds} strategy={verticalListSortingStrategy}>
           <ol className="py-[1px]">
-            {column.tasks.map((task) => (
-              <SortableTask
-                key={task.id}
-                task={task}
-                onSetComplete={onSetComplete}
-              />
+            {column.tasks.map((task, index) => (
+              <React.Fragment key={task.id}>
+                {placeholder?.colId === column.id &&
+                  placeholder.index === index && (
+                    <div className="mb-2.5 mx-1 h-10 rounded-[4px] bg-black/10 dark:bg-white/10 border-2 border-dashed border-black/20 dark:border-white/20" />
+                  )}
+                <SortableTask
+                  task={task}
+                  onSetComplete={onSetComplete}
+                  isBeingDragged={task.id === activeTaskId}
+                />
+              </React.Fragment>
             ))}
+            {placeholder?.colId === column.id &&
+              placeholder.index === column.tasks.length && (
+                <div className="mb-2.5 mx-1 h-10 rounded-[4px] bg-black/10 dark:bg-white/10 border-2 border-dashed border-black/20 dark:border-white/20" />
+              )}
           </ol>
         </SortableContext>
 
@@ -566,6 +598,197 @@ function ColumnOverlay({ column }: { column: ColumnWithTasks }) {
   );
 }
 
+const KanbanBoard = React.memo(function KanbanBoard({
+  projectId,
+  columns,
+  createTask,
+  deleteColumn,
+  updateColumnTitle,
+  setTaskComplete,
+}: {
+  projectId: string;
+  columns: ColumnWithTasks[];
+  createTask: any;
+  deleteColumn: any;
+  updateColumnTitle: any;
+  setTaskComplete: any;
+}) {
+  const [activeColumn, setActiveColumn] = useState<ColumnWithTasks | null>(
+    null,
+  );
+  const [activeTask, setActiveTask] = useState<Task | null>(null);
+  const [placeholder, setPlaceholder] = useState<{
+    colId: string;
+    index: number;
+  } | null>(null);
+
+  const queryClient = useQueryClient();
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+  );
+
+  const onDragStart = (event: DragStartEvent) => {
+    const { active } = event;
+    const type = active.data.current?.type;
+    if (type === "column") {
+      setActiveColumn(columns.find((c) => c.id === active.id) ?? null);
+    } else if (type === "task") {
+      setActiveTask(active.data.current?.task ?? null);
+    }
+  };
+
+  // Move tasks live while dragging over other tasks/columns
+  const onDragOver = (event: DragOverEvent) => {
+    const { active, over } = event;
+    if (!over) return;
+
+    const activeId = active.id as string;
+    const overId = over.id as string;
+    if (activeId === overId) return;
+
+    const activeType = active.data.current?.type;
+    const overType = over.data.current?.type;
+
+    // Never interfere when dragging a column
+    if (activeType === "column") return;
+    if (activeType !== "task") return;
+
+    if (overType === "task") {
+      const destCol = columns.find((c) => c.tasks.some((t) => t.id === overId));
+      if (!destCol) return;
+      const destIndex = destCol.tasks.findIndex((t) => t.id === overId);
+      setPlaceholder({ colId: destCol.id, index: destIndex });
+    } else if (overType === "column") {
+      const destCol = columns.find((c) => c.id === overId);
+      if (!destCol) return;
+      setPlaceholder({ colId: destCol.id, index: destCol.tasks.length });
+    }
+  };
+
+  const onDragEnd = (event: DragEndEvent) => {
+    const currentPlaceholder = placeholder;
+    setPlaceholder(null);
+    setActiveTask(null);
+    setActiveColumn(null);
+
+    const { active, over } = event;
+    if (!over) return;
+
+    const activeId = active.id as string;
+    const overId = over.id as string;
+    const activeType = active.data.current?.type;
+
+    const previousData = queryClient.getQueryData([
+      "project",
+      projectId,
+    ]) as any;
+    if (!previousData) return;
+
+    if (activeType === "column" && activeId !== overId) {
+      const newData: any = structuredClone(previousData);
+      const cols = newData.columnsWithTasks;
+      const oldIndex = cols.findIndex((c: any) => c.id === activeId);
+      const newIndex = cols.findIndex((c: any) => c.id === overId);
+      if (oldIndex === -1 || newIndex === -1) return;
+
+      const reordered = arrayMove(cols, oldIndex, newIndex);
+      reordered.forEach((col: any, i: number) => {
+        col.sortOrder = i;
+      });
+      newData.columnsWithTasks = reordered;
+
+      queryClient.setQueryData(["project", projectId], newData);
+
+      reorderColumns(
+        projectId,
+        reordered.map((col: any, i: number) => ({ id: col.id, sortOrder: i })),
+      ).catch(() => {
+        queryClient.setQueryData(["project", projectId], previousData);
+      });
+      return;
+    }
+
+    if (activeType === "task" && currentPlaceholder) {
+      const newData: any = structuredClone(previousData);
+      const cols = newData.columnsWithTasks;
+      const sourceColIndex = cols.findIndex((c: any) =>
+        c.tasks.some((t: any) => t.id === activeId),
+      );
+      if (sourceColIndex === -1) return;
+      const sourceTaskIndex = cols[sourceColIndex].tasks.findIndex(
+        (t: any) => t.id === activeId,
+      );
+
+      const destColIndex = cols.findIndex(
+        (c: any) => c.id === currentPlaceholder.colId,
+      );
+      if (destColIndex === -1) return;
+
+      let destTaskIndex = currentPlaceholder.index;
+      // if moving within same column and source is before dest, account for removal
+      if (sourceColIndex === destColIndex && sourceTaskIndex < destTaskIndex) {
+        destTaskIndex--;
+      }
+
+      const [movedTask] = cols[sourceColIndex].tasks.splice(sourceTaskIndex, 1);
+      cols[destColIndex].tasks.splice(destTaskIndex, 0, {
+        ...movedTask,
+        columnId: cols[destColIndex].id,
+      });
+
+      queryClient.setQueryData(["project", projectId], newData);
+
+      const updates: { id: string; columnId: string; sortOrder: number }[] = [];
+      cols.forEach((col: any) => {
+        col.tasks.forEach((task: any, i: number) => {
+          updates.push({ id: task.id, columnId: col.id, sortOrder: i });
+        });
+      });
+      reorderTasks(updates).catch(() => {
+        queryClient.setQueryData(["project", projectId], previousData);
+      });
+    }
+  };
+  const columnIds = columns.map((c) => c.id);
+
+  return (
+    <DndContext
+      sensors={sensors}
+      collisionDetection={activeColumn ? rectIntersection : closestCenter}
+      measuring={{ droppable: { strategy: MeasuringStrategy.WhileDragging } }}
+      onDragStart={onDragStart}
+      onDragOver={onDragOver}
+      onDragEnd={onDragEnd}
+    >
+      <SortableContext
+        items={columnIds}
+        strategy={horizontalListSortingStrategy}
+      >
+        <ol className="flex">
+          {columns.map((column) => (
+            <DraggableColumn
+              key={column.id}
+              column={column}
+              placeholder={placeholder}
+              activeTaskId={activeTask?.id || null}
+              onUpdateColumnTitle={updateColumnTitle}
+              onDeleteColumn={deleteColumn}
+              onCreateTask={createTask}
+              onSetComplete={setTaskComplete}
+            />
+          ))}
+        </ol>
+      </SortableContext>
+
+      <DragOverlay dropAnimation={null}>
+        {activeColumn && <ColumnOverlay column={activeColumn} />}
+        {activeTask && <TaskOverlay task={activeTask} />}
+      </DragOverlay>
+    </DndContext>
+  );
+});
+
 // (((((((((((((((((((((((((((((((( Page ))))))))))))))))))))))))))))))))))))))))))
 
 const Page = () => {
@@ -590,17 +813,6 @@ const Page = () => {
   const [filterCount] = useState(0);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [isAddingColumn, setIsAddingColumn] = useState(false);
-
-  const [activeColumn, setActiveColumn] = useState<ColumnWithTasks | null>(
-    null,
-  );
-  const [activeTask, setActiveTask] = useState<Task | null>(null);
-
-  const queryClient = useQueryClient();
-
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
-  );
 
   useEffect(() => {
     if (project?.title) setLocalProjectTitle(project.title);
@@ -636,142 +848,12 @@ const Page = () => {
     setIsEditingProjectTitle(false);
   };
 
-  const onDragStart = (event: DragStartEvent) => {
-    const { active } = event;
-    const type = active.data.current?.type;
-    if (type === "column") {
-      setActiveColumn(columns.find((c) => c.id === active.id) ?? null);
-    } else if (type === "task") {
-      setActiveTask(active.data.current?.task ?? null);
-    }
-  };
-
-  // Move tasks live while dragging over other tasks/columns
-  const onDragOver = (event: DragOverEvent) => {
-    const { active, over } = event;
-    if (!over) return;
-
-    const activeId = active.id as string;
-    const overId = over.id as string;
-    if (activeId === overId) return;
-
-    const activeType = active.data.current?.type;
-    const overType = over.data.current?.type;
-
-    // Never interfere when dragging a column
-    if (activeType === "column") return;
-    if (activeType !== "task") return;
-
-    const previousData = queryClient.getQueryData(["project", project!.id]);
-    if (!previousData) return;
-
-    const newData: any = structuredClone(previousData);
-    const cols: ColumnWithTasks[] = newData.columnsWithTasks;
-
-    const sourceColIndex = cols.findIndex((c) =>
-      c.tasks.some((t) => t.id === activeId),
-    );
-    if (sourceColIndex === -1) return;
-
-    let destColIndex: number;
-    let destTaskIndex: number;
-
-    if (overType === "task") {
-      destColIndex = cols.findIndex((c) =>
-        c.tasks.some((t) => t.id === overId),
-      );
-      if (destColIndex === -1) return;
-      destTaskIndex = cols[destColIndex].tasks.findIndex(
-        (t) => t.id === overId,
-      );
-    } else if (overType === "column") {
-      destColIndex = cols.findIndex((c) => c.id === overId);
-      if (destColIndex === -1) return;
-      destTaskIndex = cols[destColIndex].tasks.length;
-    } else {
-      return;
-    }
-
-    const sourceCol = cols[sourceColIndex];
-    const destCol = cols[destColIndex];
-    const taskIndex = sourceCol.tasks.findIndex((t) => t.id === activeId);
-    const [movedTask] = sourceCol.tasks.splice(taskIndex, 1);
-    destCol.tasks.splice(destTaskIndex, 0, {
-      ...movedTask,
-      columnId: destCol.id,
-    });
-
-    queryClient.setQueryData(["project", project!.id], newData);
-  };
-
-  const onDragEnd = (event: DragEndEvent) => {
-    setActiveColumn(null);
-    setActiveTask(null);
-
-    const { active, over } = event;
-    if (!over) return;
-
-    const activeId = active.id as string;
-    const overId = over.id as string;
-    const activeType = active.data.current?.type;
-
-    const previousData = queryClient.getQueryData([
-      "project",
-      project!.id,
-    ]) as any;
-    if (!previousData) return;
-
-    if (activeType === "column" && activeId !== overId) {
-      const newData: any = structuredClone(previousData);
-      const cols = newData.columnsWithTasks;
-      const oldIndex = cols.findIndex((c: any) => c.id === activeId);
-      const newIndex = cols.findIndex((c: any) => c.id === overId);
-      if (oldIndex === -1 || newIndex === -1) return;
-
-      const reordered = arrayMove(cols, oldIndex, newIndex);
-      reordered.forEach((col: any, i: number) => {
-        col.sortOrder = i;
-      });
-      newData.columnsWithTasks = reordered;
-
-      queryClient.setQueryData(["project", project!.id], newData);
-
-      reorderColumns(
-        project!.id,
-        reordered.map((col: any, i: number) => ({ id: col.id, sortOrder: i })),
-      ).catch(() => {
-        queryClient.setQueryData(["project", project!.id], previousData);
-      });
-      return;
-    }
-
-    if (activeType === "task") {
-      // Tasks already reordered by onDragOver — just persist
-      const currentData = queryClient.getQueryData([
-        "project",
-        project!.id,
-      ]) as any;
-      if (!currentData) return;
-
-      const updates: { id: string; columnId: string; sortOrder: number }[] = [];
-      currentData.columnsWithTasks.forEach((col: any) => {
-        col.tasks.forEach((task: any, i: number) => {
-          updates.push({ id: task.id, columnId: col.id, sortOrder: i });
-        });
-      });
-
-      reorderTasks(updates).catch(() => {
-        queryClient.setQueryData(["project", project!.id], previousData);
-      });
-    }
-  };
-
   if (isLoading) {
     return (
       <div className="relative h-screen w-full">
         <Header visible={true} className="mb-5" />
         <div className="absolute inset-0 h-screen flex items-center justify-center">
-          <RippleWaveLoader />
+          <WaveLoader />
         </div>
       </div>
     );
@@ -789,8 +871,6 @@ const Page = () => {
       </div>
     );
   }
-
-  const columnIds = columns.map((c) => c.id);
 
   function handleCreateNewColumn(formData: FormData) {
     const newColumnTitle = formData.get("title") as string;
@@ -922,80 +1002,55 @@ const Page = () => {
         {/* Main section */}
         <main className="flex-1 p-3">
           <section className="h-full flex overflow-x-auto flex-1 overflow-auto custom-scrollbar">
-            <DndContext
-              sensors={sensors}
-              collisionDetection={
-                activeColumn ? rectIntersection : closestCorners
-              }
-              measuring={{ droppable: { strategy: MeasuringStrategy.Always } }}
-              onDragStart={onDragStart}
-              onDragOver={onDragOver}
-              onDragEnd={onDragEnd}
-            >
-              <SortableContext
-                items={columnIds}
-                strategy={horizontalListSortingStrategy}
+            <KanbanBoard
+              projectId={project!.id}
+              columns={columns}
+              createTask={createTask}
+              deleteColumn={deleteColumn}
+              updateColumnTitle={updateColumnTitle}
+              setTaskComplete={setTaskComplete}
+            />
+
+            {isAddingColumn ? (
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  handleCreateNewColumn(new FormData(e.currentTarget));
+                }}
               >
-                <ol className="flex">
-                  {columns.map((column) => (
-                    <DraggableColumn
-                      key={column.id}
-                      column={column}
-                      onUpdateColumnTitle={updateColumnTitle}
-                      onDeleteColumn={deleteColumn}
-                      onCreateTask={createTask}
-                      onSetComplete={setTaskComplete}
-                    />
-                  ))}
-                </ol>
-              </SortableContext>
-
-              <DragOverlay>
-                {activeColumn && <ColumnOverlay column={activeColumn} />}
-                {activeTask && <TaskOverlay task={activeTask} />}
-              </DragOverlay>
-
-              {isAddingColumn ? (
-                <form
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    handleCreateNewColumn(new FormData(e.currentTarget));
-                  }}
-                >
-                  <Card className="w-75 p-2 mx-2 space-y-4 rounded-[6px] bg-[#F7F5F6] dark:bg-[#161616] shadow-xs border-0 dark:border-1 dark:border-white/5 shadow-gray-400 dark:shadow-black/80">
-                    <input
-                      name="title"
-                      placeholder="Enter column title"
-                      className="resize-none text-md w-full px-3 py-2 rounded-[4px] bg-zinc-50 dark:bg-zinc-800 border outline-none font-[inter]"
-                      autoFocus
-                    />
-                    <div className="flex space-x-2 items-center">
-                      <Button
-                        type="submit"
-                        className="bg-blue-400 rounded-[4px] hover:bg-blue-300 text-zinc-900"
-                      >
-                        Add Column
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        className="h-full p-2 rounded-[4px]"
-                        onClick={() => setIsAddingColumn(false)}
-                      >
-                        <X size={15} />
-                      </Button>
-                    </div>
-                  </Card>
-                </form>
-              ) : (
-                <button
-                  onClick={() => setIsAddingColumn(true)}
-                  className="p-3 rounded-[6px] bg-black/20 hover:bg-black/10 dark:bg-white/20 dark:hover:bg-white/10 backdrop-blur-[2px] text-md sm:flex-shrink-0 h-10 min-w-75 flex items-center justify-center hover:cursor-pointer gap-1 mx-2"
-                >
-                  <Plus size={15} />
-                  Add a column
-                </button>
-              )}
-            </DndContext>
+                <Card className="w-75 p-2 mx-2 space-y-4 rounded-[6px] bg-[#F7F5F6] dark:bg-[#161616] shadow-xs border-0 dark:border-1 dark:border-white/5 shadow-gray-400 dark:shadow-black/80">
+                  <input
+                    name="title"
+                    placeholder="Enter column title"
+                    className="resize-none text-md w-full px-3 py-2 rounded-[4px] bg-zinc-50 dark:bg-zinc-800 border outline-none font-[inter]"
+                    autoFocus
+                  />
+                  <div className="flex space-x-2 items-center">
+                    <Button
+                      type="submit"
+                      className="bg-blue-400 rounded-[4px] hover:bg-blue-300 text-zinc-900"
+                    >
+                      Add Column
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      className="h-full p-2 rounded-[4px]"
+                      onClick={() => setIsAddingColumn(false)}
+                    >
+                      <X size={15} />
+                    </Button>
+                  </div>
+                </Card>
+              </form>
+            ) : (
+              <button
+                onClick={() => setIsAddingColumn(true)}
+                className="p-3 rounded-[6px] bg-black/20 hover:bg-black/10 dark:bg-white/20 dark:hover:bg-white/10 backdrop-blur-[2px] text-md sm:flex-shrink-0 h-10 min-w-75 flex items-center justify-center hover:cursor-pointer gap-1 mx-2"
+              >
+                <Plus size={15} />
+                Add a column
+              </button>
+            )}
           </section>
         </main>
       </motion.section>

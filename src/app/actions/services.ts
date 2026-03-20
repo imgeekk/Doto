@@ -407,8 +407,27 @@ async function reorderTasks(
   taskUpdates: { id: string; columnId: string; sortOrder: number }[],
 ) {
   try {
-    // Create an array of update promises for the transaction
-    const transaction = taskUpdates.map((update) =>
+    // Fetch current state of all affected tasks
+    const currentTasks = await prisma.tasks.findMany({
+      where: { id: { in: taskUpdates.map((u) => u.id) } },
+      select: { id: true, columnId: true, sortOrder: true },
+    });
+
+    const currentMap = new Map(currentTasks.map((t) => [t.id, t]));
+
+    // Only keep updates where something actually changed
+    const changedUpdates = taskUpdates.filter((update) => {
+      const current = currentMap.get(update.id);
+      if (!current) return true; // new task, include it
+      return (
+        current.columnId !== update.columnId ||
+        current.sortOrder !== update.sortOrder
+      );
+    });
+
+    if (changedUpdates.length === 0) return true; // nothing to do
+
+    const transaction = changedUpdates.map((update) =>
       prisma.tasks.update({
         where: { id: update.id },
         data: {
@@ -417,7 +436,7 @@ async function reorderTasks(
         },
       }),
     );
-    // Execute all updates atomically
+
     await prisma.$transaction(transaction);
     return true;
   } catch (err) {
@@ -451,11 +470,13 @@ async function createProjectWithDefaultColumn(projectData: {
 }) {
   try {
     const data = await prisma.$transaction(async (tx) => {
-      const project = await createProject({
-        title: projectData.title,
-        description: projectData.description,
-        color: projectData.color || "bg-blue-500",
-        userId: projectData.userId,
+      const project = await tx.projects.create({
+        data: {
+          title: projectData.title,
+          description: projectData.description,
+          color: projectData.color || "bg-blue-500",
+          userId: projectData.userId,
+        },
       });
 
       const defaultColumns = [
@@ -467,7 +488,7 @@ async function createProjectWithDefaultColumn(projectData: {
 
       await Promise.all(
         defaultColumns.map((column) =>
-          createColumn({ ...column, projectId: project.id }),
+          tx.columns.create({ data: { ...column, projectId: project.id } }),
         ),
       );
 
