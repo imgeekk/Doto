@@ -104,7 +104,6 @@ function ProjectsTabs({ userId }: { userId: string }) {
             <h1 className="text-xs font-medium text-black/50 dark:text-white/50">
               Closed Projects
             </h1>
-            <BsFilter size={15} className="text-black/60 dark:text-white/60" />
           </header>
           <section className="flex-1 min-h-0 overflow-y-auto">
             {closedProjects.length === 0 ? (

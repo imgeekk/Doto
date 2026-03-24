@@ -3,7 +3,6 @@ import { BsGraphUp } from "react-icons/bs";
 import Header from "@/components/Header";
 import { ProjectsTabs } from "@/app/projects/ProjectsTab";
 import { useRouter } from "next/navigation";
-import { useProjects } from "@/lib/hooks/useProjects";
 import { Card } from "@/components/ui/card";
 import { useDashboard } from "@/lib/hooks/useDashboard";
 import TaskCard from "./TaskCard";
@@ -32,7 +31,7 @@ function SkeletonBox({
 
 function StatCardSkeleton() {
   return (
-    <Card className="h-20 px-5 py-3 rounded-[4px] dark:bg-[#1F1F1F] bg-white shadow-xs dark:shadow-black border border-black/5 dark:border-white/15 shadow-gray-400 overflow-hidden">
+    <Card className="h-20 px-5 py-3 rounded-[4px] dark:bg-[#1F1F1F] shadow-[inset_1px_1px_2px_#bababa,inset_-1px_-1px_0px_#efefef] dark:shadow-[inset_1px_1px_0px_#3d3d3d,inset_-1px_-1px_0px_#0f0f0f] overflow-hidden">
       <section className="w-full h-full flex items-center gap-3">
         <div className="flex-1 flex flex-col gap-2">
           <SkeletonBox className="h-3 w-24" />
@@ -56,7 +55,8 @@ function StatCard({
   icon: React.ReactNode;
 }) {
   return (
-    <Card className="h-20 px-5 py-3 rounded-[4px] dark:bg-[#1F1F1F] bg-white shadow-xs dark:shadow-black border border-black/5 dark:border-white/15 shadow-gray-400 overflow-hidden">
+    <Card className="h-20 px-5 py-3 rounded-md dark:bg-[#1F1F1F] bg-zinc-100 shadow-[inset_1px_1px_2px_#bababa,inset_-1px_-1px_0px_#efefef] dark:shadow-[inset_1px_1px_0px_#3d3d3d,inset_-1px_-1px_0px_#0f0f0f]
+       border border-transparent overflow-hidden">
       <section className="w-full h-full flex">
         <div className="flex-1 flex flex-col">
           <h1 className="text-xs sm:text-sm text-black/70 dark:text-white/70">
@@ -317,7 +317,7 @@ const ProjectClient = ({ user }: any) => {
             {/* Today's Tasks + Recent Activity */}
             <section className="flex flex-col lg:flex-row lg:gap-5">
               {/* Today's Tasks */}
-              <Card className="lg:w-2/3 mb-7 p-5 h-60 max-h-70 overflow-hidden flex flex-col rounded-[4px] dark:bg-[#1F1F1F] bg-white shadow-xs dark:shadow-black border border-black/5 dark:border-white/15 shadow-gray-400">
+              <Card className="lg:w-2/3 mb-7 p-5 h-60 max-h-70 overflow-hidden flex flex-col rounded-md dark:bg-[#1F1F1F] bg-neutral-100 shadow-[inset_1px_1px_2px_#bababa,inset_-1px_-1px_0px_#efefef] dark:shadow-[inset_1px_1px_0px_#3d3d3d,inset_-1px_-1px_0px_#0f0f0f]">
                 <header className="mb-3">
                   <h1 className="max-sm:text-sm font-[inter-med]">
                     Todays Tasks
@@ -357,7 +357,7 @@ const ProjectClient = ({ user }: any) => {
               </Card>
 
               {/* Recent Activity */}
-              <Card className="lg:w-1/3 mb-7 p-5 h-60 max-h-60 overflow-hidden flex flex-col rounded-[4px] dark:bg-[#1F1F1F] bg-white shadow-xs dark:shadow-black border border-black/5 dark:border-white/15 shadow-gray-400">
+              <Card className="lg:w-1/3 mb-7 p-5 h-60 max-h-60 overflow-hidden flex flex-col rounded-md dark:bg-[#1F1F1F] bg-neutral-100 shadow-[inset_1px_1px_2px_#bababa,inset_-1px_-1px_0px_#efefef] dark:shadow-[inset_1px_1px_0px_#3d3d3d,inset_-1px_-1px_0px_#0f0f0f]">
                 <header className="mb-3">
                   <h1 className="max-sm:text-sm font-[inter-med] flex items-center gap-2">
                     <BsGraphUp size={13} />
@@ -405,7 +405,7 @@ const ProjectClient = ({ user }: any) => {
             </section>
 
             {/* Projects List */}
-            <Card className="p-5 flex-1 min-h-0 overflow-hidden flex flex-col rounded-[4px] dark:bg-[#1F1F1F] bg-white shadow-xs dark:shadow-black border border-black/5 dark:border-white/15 shadow-gray-400">
+            <Card className="p-5 flex-1 min-h-0 overflow-hidden flex flex-col rounded-md dark:bg-[#1F1F1F] bg-neutral-100 shadow-[inset_1px_1px_2px_#bababa,inset_-1px_-1px_0px_#efefef] dark:shadow-[inset_1px_1px_0px_#3d3d3d,inset_-1px_-1px_0px_#0f0f0f]">
               <header className="mb-3">
                 <h1 className="max-sm:text-sm font-[inter-med]">
                   Projects List
